@@ -23,9 +23,11 @@
   .app-sidebar-footer { margin-top:auto; display:flex; align-items:center; gap:7px; border:1px solid rgba(110,231,183,.18); border-radius:10px; background:rgba(16,185,129,.08); padding:9px 10px; color:#a7f3d0; font-size:11px; font-weight:600; }
   .app-status-dot { display:inline-block; width:7px; height:7px; border-radius:999px; background:#34d399; box-shadow:0 0 0 3px rgba(52,211,153,.14); }
   .app-body { min-width:0; }
-  .app-topbar { display:flex; min-height:54px; align-items:center; justify-content:space-between; border-bottom:1px solid rgba(148,163,184,.22); background:rgba(255,255,255,.78); padding:10px 28px; backdrop-filter:blur(12px); }
-  .app-topbar-status { display:flex; align-items:center; gap:8px; border:1px solid #dbe5ef; border-radius:999px; background:#fff; padding:7px 11px; color:#475569; font-size:11px; font-weight:700; box-shadow:0 2px 8px rgba(15,23,42,.04); }
-  .app-content { min-height:calc(100vh - 54px); padding:28px; }
+  .app-content { min-height:100vh; padding:24px 28px; }
+  .app-content > a:first-child + header { display:flex; min-width:0; align-items:baseline; gap:10px; margin-top:2px; }
+  .app-content > a:first-child + header > p:first-child { display:none; }
+  .app-content > a:first-child + header > h2 { margin-top:0; white-space:nowrap; }
+  .app-content > a:first-child + header > p:last-child { min-width:0; margin-top:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .panel { border:1px solid rgba(203,213,225,.9); border-radius:16px; background:rgba(255,255,255,.94); padding:16px; box-shadow:0 10px 28px rgba(15,23,42,.055),0 1px 2px rgba(15,23,42,.04); }
   .actionbar { display:flex; align-items:center; justify-content:space-between; border:1px solid rgba(203,213,225,.9); border-radius:16px; background:rgba(255,255,255,.94); padding:12px 14px; box-shadow:0 6px 20px rgba(15,23,42,.04); }
   .empty-workspace { max-width:720px; border:1px solid rgba(203,213,225,.9); border-radius:16px; background:#fff; padding:22px; box-shadow:0 6px 20px rgba(15,23,42,.04); }
@@ -43,8 +45,9 @@
   .app-sidebar nav { margin-top:18px; display:flex; overflow:auto; }
   .app-nav-link { flex:0 0 auto; }
   .app-sidebar-footer { display:none; }
-  .app-topbar { min-height:54px; padding:10px 16px; }
-  .app-topbar-status { display:none; }
-  .app-content { min-height:auto; padding:22px 16px; }
+  .app-content { min-height:auto; padding:18px 16px; }
+  .app-content > a:first-child + header { align-items:flex-start; flex-wrap:wrap; gap:2px 8px; }
+  .app-content > a:first-child + header > h2 { font-size:1.25rem; }
+  .app-content > a:first-child + header > p:last-child { max-width:100%; }
   .empty-workspace { padding:20px; }
 }
