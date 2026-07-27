@@ -563,15 +563,18 @@ function TrainingPlan({
                 Generate consistent previews during training.
               </p>
             </div>
-            <label className="training-toggle">
+            <label
+              className="training-toggle"
+              title="Generate validation images"
+            >
               <input
                 type="checkbox"
+                aria-label="Generate validation images"
                 checked={!!params.sampleEnabled}
                 onChange={(e) =>
                   setParams({ ...params, sampleEnabled: e.target.checked })
                 }
               />
-              Enable
             </label>
           </div>
           {params.sampleEnabled && (
