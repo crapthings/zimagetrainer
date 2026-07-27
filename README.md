@@ -1,4 +1,4 @@
-# Z-Image Turbo LoRA Trainer
+# Z-Forge
 
 A focused local trainer for `Tongyi-MAI/Z-Image-Turbo`, with a CLI and local
 web dashboard. Give it a captioned image folder and it produces one portable
