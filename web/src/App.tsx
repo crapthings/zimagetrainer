@@ -186,6 +186,7 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
       <svg
         className="h-44 w-full overflow-visible"
         viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
         role="img"
         aria-label="Training loss chart"
       >
@@ -848,11 +849,8 @@ function TrainingMonitor() {
                   </div>
                   <div className="training-metrics">
                     <div>
-                      <span>Step</span>
-                      <strong>
-                        {step.toLocaleString()}
-                        <small> / {total.toLocaleString()}</small>
-                      </strong>
+                      <span>Max steps</span>
+                      <strong>{total.toLocaleString()}</strong>
                     </div>
                     <div>
                       <span>Current loss</span>
