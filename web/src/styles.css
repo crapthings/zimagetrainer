@@ -471,12 +471,6 @@
     font-size: 12px;
     font-weight: 750;
   }
-  .training-form-description {
-    margin-top: 2px;
-    color: var(--app-muted);
-    font-size: 10px;
-    line-height: 1.4;
-  }
   .training-form-divider {
     height: 1px;
     background: var(--color-olive-200);

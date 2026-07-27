@@ -397,14 +397,12 @@ function DatasetActions({
 }
 
 function TrainingPlan({
-  datasetName,
   imageCount,
   captionedCount,
   suggestion,
   onQueue,
   queuing,
 }: {
-  datasetName: string;
   imageCount: number;
   captionedCount: number;
   suggestion?: Suggestion;
@@ -452,27 +450,13 @@ function TrainingPlan({
       }));
   };
   const ready = imageCount > 0 && captionedCount === imageCount;
+  const recommended = suggestion?.recommended ?? params;
+  const qualitySteps = Math.max(1600, suggestion?.recommended.steps ?? 1600);
   const selected = (name: "recommended" | "test" | "quality") =>
     `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
     <section className="training-panel">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">Training</h3>
-          <p className="mt-1 text-[11px] text-olive-500">
-            {datasetName} · {imageCount} images · {captionedCount}/{imageCount}{" "}
-            captioned
-          </p>
-        </div>
-        <span
-          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
-        >
-          {ready ? "Ready to train" : "Complete captions first"}
-        </span>
-      </div>
-      <p className="mt-3 text-xs text-olive-600">
-        {suggestion?.reason ?? "Loading a recommendation from your dataset…"}
-      </p>
+      <h3 className="text-sm font-semibold">Training</h3>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
         <button
           className={selected("recommended")}
@@ -482,7 +466,8 @@ function TrainingPlan({
             Recommended
           </span>
           <span className="mt-1 block text-[10px] text-olive-500">
-            Balanced for this dataset
+            {recommended.resolution}px · R{recommended.rank} ·{" "}
+            {recommended.steps} steps
           </span>
         </button>
         <button
@@ -493,7 +478,7 @@ function TrainingPlan({
             Fast test
           </span>
           <span className="mt-1 block text-[10px] text-olive-500">
-            Short run to validate setup
+            768px · R8 · 500 steps
           </span>
         </button>
         <button
@@ -504,18 +489,13 @@ function TrainingPlan({
             Higher detail
           </span>
           <span className="mt-1 block text-[10px] text-olive-500">
-            More capacity and steps
+            1024px · R32 · {qualitySteps} steps
           </span>
         </button>
       </div>
       <div className="training-form">
         <section className="training-form-group">
-          <div>
-            <h4 className="training-form-title">Training parameters</h4>
-            <p className="training-form-description">
-              Model size, output resolution, and run length.
-            </p>
-          </div>
+          <h4 className="training-form-title">Training parameters</h4>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <label>
               Resolution
@@ -559,9 +539,6 @@ function TrainingPlan({
           <div className="flex items-start justify-between gap-4">
             <div>
               <h4 className="training-form-title">Validation images</h4>
-              <p className="training-form-description">
-                Generate consistent previews during training.
-              </p>
             </div>
             <label
               className="training-toggle"
@@ -604,11 +581,6 @@ function TrainingPlan({
                   }
                 />
               </label>
-              {suggestion?.sample_prompt_reason && (
-                <p className="text-[10px] leading-relaxed text-olive-500">
-                  {suggestion.sample_prompt_reason}
-                </p>
-              )}
             </div>
           )}
         </section>
@@ -1068,7 +1040,6 @@ export function DatasetDetail() {
 
       <aside className="dataset-aside" aria-label="Training settings">
         <TrainingPlan
-          datasetName={data.dataset.name}
           imageCount={data.images.length}
           captionedCount={captionedCount}
           suggestion={suggestion}
