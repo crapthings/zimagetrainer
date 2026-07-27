@@ -1,83 +1,929 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { autoUpdate, flip, FloatingPortal, offset, shift, useClick, useDismiss, useFloating, useInteractions, useRole } from '@floating-ui/react'
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
-import ModelSelect from './ModelSelect'
-import { useStore } from './store'
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  useClick,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import ModelSelect from "./ModelSelect";
+import { useStore } from "./store";
 
-const API = ''
-const DEFAULT_CAPTION_PROMPT = 'Write one concise, factual image-training caption. Describe subject, visual style, setting, composition, lighting and meaningful details. Output only the caption.'
-type Dataset = { id:string; name:string; folder:string; created_at:string; image_count:number; cover_path?:string; system_prompt?:string; caption_model?:string }
-type Image = { id:string; path:string; caption:string }
-type TrainingParams = { resolution:number; rank:number; steps:number; sampleEnabled?:boolean; sampleEvery?:number; samplePrompt?:string }
-type Suggestion = { image_count:number; captioned_count:number; caption_coverage:number; median_short_side:number; recommended:TrainingParams; sample_prompt?:string; sample_prompt_reason?:string; reason:string }
-const getDatasets = async ():Promise<Dataset[]> => (await fetch(`${API}/api/datasets`)).json().then(x=>x.datasets)
-const getDataset = async (id:string):Promise<{dataset:Dataset;images:Image[]}> => (await fetch(`${API}/api/datasets/${id}`)).json()
+const API = "";
+const DEFAULT_CAPTION_PROMPT =
+  "Write one concise, factual image-training caption. Describe subject, visual style, setting, composition, lighting and meaningful details. Output only the caption.";
+type Dataset = {
+  id: string;
+  name: string;
+  folder: string;
+  created_at: string;
+  image_count: number;
+  cover_path?: string;
+  system_prompt?: string;
+  caption_model?: string;
+};
+type Image = { id: string; path: string; caption: string };
+type TrainingParams = {
+  resolution: number;
+  rank: number;
+  steps: number;
+  sampleEnabled?: boolean;
+  sampleEvery?: number;
+  samplePrompt?: string;
+};
+type Suggestion = {
+  image_count: number;
+  captioned_count: number;
+  caption_coverage: number;
+  median_short_side: number;
+  recommended: TrainingParams;
+  sample_prompt?: string;
+  sample_prompt_reason?: string;
+  reason: string;
+};
+const getDatasets = async (): Promise<Dataset[]> =>
+  (await fetch(`${API}/api/datasets`)).json().then((x) => x.datasets);
+const getDataset = async (
+  id: string,
+): Promise<{ dataset: Dataset; images: Image[] }> =>
+  (await fetch(`${API}/api/datasets/${id}`)).json();
 
-function CaptionSettings({ model, prompt, onModel, onPrompt, onSave, saving }:{model:string;prompt:string;onModel:(v:string)=>void;onPrompt:(v:string)=>void;onSave:()=>void;saving:boolean}) {
-  return <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2"><summary className="cursor-pointer text-xs font-semibold text-slate-700">Caption settings</summary><p className="mt-2 text-[11px] text-slate-500">Saved only for this dataset.</p><label>Gemini model<ModelSelect value={model} onChange={onModel}/></label><label>System prompt<textarea className="mt-1 min-h-28 w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-cyan-500" value={prompt} onChange={e=>onPrompt(e.target.value)}/></label><div className="mt-3 flex items-center justify-between"><button className="text-xs font-semibold text-cyan-700 hover:underline" onClick={()=>onPrompt(DEFAULT_CAPTION_PROMPT)}>Restore default</button><button className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40" disabled={saving} onClick={onSave}>Save settings</button></div></details>
+function CaptionSettings({
+  model,
+  prompt,
+  onModel,
+  onPrompt,
+  onSave,
+  saving,
+}: {
+  model: string;
+  prompt: string;
+  onModel: (v: string) => void;
+  onPrompt: (v: string) => void;
+  onSave: () => void;
+  saving: boolean;
+}) {
+  return (
+    <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2">
+      <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+        Caption settings
+      </summary>
+      <p className="mt-2 text-[11px] text-slate-500">
+        Saved only for this dataset.
+      </p>
+      <label>
+        Gemini model
+        <ModelSelect value={model} onChange={onModel} />
+      </label>
+      <label>
+        System prompt
+        <textarea
+          className="mt-1 min-h-28 w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-cyan-500"
+          value={prompt}
+          onChange={(e) => onPrompt(e.target.value)}
+        />
+      </label>
+      <div className="mt-3 flex items-center justify-between">
+        <button
+          className="text-xs font-semibold text-cyan-700 hover:underline"
+          onClick={() => onPrompt(DEFAULT_CAPTION_PROMPT)}
+        >
+          Restore default
+        </button>
+        <button
+          className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+          disabled={saving}
+          onClick={onSave}
+        >
+          Save settings
+        </button>
+      </div>
+    </details>
+  );
 }
 
-function ConfirmAction({ label, title, detail, confirmLabel, onConfirm, disabled=false, danger=false }:{label:string;title:string;detail:string;confirmLabel:string;onConfirm:()=>void;disabled?:boolean;danger?:boolean}) {
-  const [open,setOpen]=useState(false)
-  const {refs,floatingStyles,context}=useFloating({open,onOpenChange:setOpen,placement:'bottom-end',middleware:[offset(6),flip(),shift({padding:8})],whileElementsMounted:autoUpdate})
-  const {getReferenceProps,getFloatingProps}=useInteractions([useClick(context),useDismiss(context),useRole(context)])
-  return <><button ref={refs.setReference} disabled={disabled} className={danger?'rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-40':'secondary !mt-0 !w-auto'} {...getReferenceProps()}>{label}</button>{open&&<FloatingPortal><div ref={refs.setFloating} style={floatingStyles} className="z-50 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-xl" {...getFloatingProps()}><h3 className="text-xs font-bold text-slate-900">{title}</h3><p className="mt-1 text-[11px] leading-relaxed text-slate-500">{detail}</p><div className="mt-3 flex justify-end gap-2"><button className="rounded-md px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100" onClick={()=>setOpen(false)}>Cancel</button><button className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700" onClick={()=>{onConfirm();setOpen(false)}}>{confirmLabel}</button></div></div></FloatingPortal>}</>
+function ConfirmAction({
+  label,
+  title,
+  detail,
+  confirmLabel,
+  onConfirm,
+  disabled = false,
+  danger = false,
+}: {
+  label: string;
+  title: string;
+  detail: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: "bottom-end",
+    middleware: [offset(6), flip(), shift({ padding: 8 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    useClick(context),
+    useDismiss(context),
+    useRole(context),
+  ]);
+  return (
+    <>
+      <button
+        ref={refs.setReference}
+        disabled={disabled}
+        className={
+          danger
+            ? "rounded-md border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-40"
+            : "secondary !mt-0 !w-auto"
+        }
+        {...getReferenceProps()}
+      >
+        {label}
+      </button>
+      {open && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="z-50 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
+            {...getFloatingProps()}
+          >
+            <h3 className="text-xs font-bold text-slate-900">{title}</h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              {detail}
+            </p>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                className="rounded-md px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                onClick={() => {
+                  onConfirm();
+                  setOpen(false);
+                }}
+              >
+                {confirmLabel}
+              </button>
+            </div>
+          </div>
+        </FloatingPortal>
+      )}
+    </>
+  );
 }
 
-function WorkflowSteps({ imageCount, captionedCount }:{imageCount:number;captionedCount:number}) {
-  const current=imageCount===0?0:captionedCount<imageCount?1:2
-  const steps=[
-    {label:'Upload', detail:imageCount?`${imageCount} images`:'Add images', complete:imageCount>0},
-    {label:'Caption', detail:imageCount?`${captionedCount}/${imageCount} ready`:'Waiting for images', complete:imageCount>0&&captionedCount===imageCount},
-    {label:'Review', detail:captionedCount===imageCount&&imageCount?'Check captions':'Waiting for captions', complete:false},
-    {label:'Train', detail:captionedCount===imageCount&&imageCount?'Choose a plan':'Not ready', complete:false},
-  ]
-  return <ol className="mt-5 grid gap-2 sm:grid-cols-4">{steps.map((step,index)=>{const active=index===current;return <li key={step.label} className={`rounded-lg border p-3 ${step.complete?'border-emerald-200 bg-emerald-50':active?'border-cyan-300 bg-cyan-50':'border-slate-200 bg-white'}`}><div className="flex items-center gap-2"><span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${step.complete?'bg-emerald-500 text-white':active?'bg-cyan-600 text-white':'bg-slate-100 text-slate-500'}`}>{step.complete?'✓':index+1}</span><span className="text-xs font-semibold text-slate-800">{step.label}</span></div><p className="mt-1 text-[11px] text-slate-500">{step.detail}</p></li>})}</ol>
-}
-
-function TrainingPlan({ datasetName, imageCount, captionedCount, suggestion, onQueue, queuing }:{datasetName:string;imageCount:number;captionedCount:number;suggestion?:Suggestion;onQueue:(params:TrainingParams)=>void;queuing:boolean}) {
-  const [preset,setPreset]=useState<'recommended'|'test'|'quality'>('recommended')
-  const [params,setParams]=useState<TrainingParams>({resolution:1024,rank:16,steps:1000,sampleEnabled:true,sampleEvery:250,samplePrompt:''})
-  useEffect(()=>{if(suggestion)setParams(current=>({...current,...suggestion.recommended,sampleEnabled:current.sampleEnabled??true,sampleEvery:current.sampleEvery??250,samplePrompt:current.samplePrompt||suggestion.sample_prompt||''}))},[suggestion?.reason])
-  const applyPreset=(next:'recommended'|'test'|'quality')=>{
-    setPreset(next)
-    if(next==='recommended'&&suggestion)setParams(current=>({...current,...suggestion.recommended}))
-    if(next==='test')setParams(current=>({...current,resolution:768,rank:8,steps:500}))
-    if(next==='quality')setParams(current=>({...current,resolution:1024,rank:32,steps:Math.max(1600,suggestion?.recommended.steps??1600)}))
-  }
-  const ready=imageCount>0&&captionedCount===imageCount
-  const selected=(name:'recommended'|'test'|'quality')=>`rounded-md border px-3 py-2 text-left transition ${preset===name?'border-violet-400 bg-violet-50 ring-1 ring-violet-200':'border-slate-200 bg-white hover:border-slate-300'}`
-  return <section className="panel"><div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold tracking-[.18em] text-violet-600">STEP 4</p><h3 className="mt-1 text-sm font-semibold">Choose a training plan</h3><p className="mt-1 text-[11px] text-slate-500">{datasetName} · {imageCount} images · {captionedCount}/{imageCount} captioned</p></div><span className={`rounded-full px-2 py-1 text-[10px] font-semibold ${ready?'bg-emerald-50 text-emerald-700':'bg-amber-50 text-amber-700'}`}>{ready?'Ready to train':'Complete captions first'}</span></div><p className="mt-3 text-xs text-slate-600">{suggestion?.reason??'Loading a recommendation from your dataset…'}</p><div className="mt-3 grid gap-2 sm:grid-cols-3"><button className={selected('recommended')} onClick={()=>applyPreset('recommended')}><span className="block text-xs font-semibold text-slate-800">Recommended</span><span className="mt-1 block text-[10px] text-slate-500">Balanced for this dataset</span></button><button className={selected('test')} onClick={()=>applyPreset('test')}><span className="block text-xs font-semibold text-slate-800">Fast test</span><span className="mt-1 block text-[10px] text-slate-500">Short run to validate setup</span></button><button className={selected('quality')} onClick={()=>applyPreset('quality')}><span className="block text-xs font-semibold text-slate-800">Higher detail</span><span className="mt-1 block text-[10px] text-slate-500">More capacity and steps</span></button></div><details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2"><summary className="cursor-pointer text-xs font-semibold text-slate-700">Advanced options</summary><div className="mt-2 grid grid-cols-3 gap-2"><label>Resolution<input className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs" type="number" value={params.resolution} onChange={e=>setParams({...params,resolution:+e.target.value})}/></label><label>Rank<input className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs" type="number" value={params.rank} onChange={e=>setParams({...params,rank:+e.target.value})}/></label><label>Steps<input className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs" type="number" value={params.steps} onChange={e=>setParams({...params,steps:+e.target.value})}/></label></div><label className="mt-3 flex items-center gap-2 !m-0 text-xs font-semibold text-slate-700"><input type="checkbox" checked={!!params.sampleEnabled} onChange={e=>setParams({...params,sampleEnabled:e.target.checked})}/> Generate validation images</label>{params.sampleEnabled&&<><label>Every N steps<input className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs" type="number" min="1" value={params.sampleEvery} onChange={e=>setParams({...params,sampleEvery:+e.target.value})}/></label><label>Test prompt<textarea className="mt-1 min-h-20 w-full rounded-md border border-slate-200 bg-white p-2 text-xs" value={params.samplePrompt} onChange={e=>setParams({...params,samplePrompt:e.target.value})}/></label><p className="mt-1 text-[10px] text-slate-500">{suggestion?.sample_prompt_reason}</p></>}</details><button className="mt-3 w-full rounded-md bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40" disabled={!ready||queuing} onClick={()=>onQueue(params)}>{queuing?'Adding training run…':'Start training'}</button>{!ready&&<p className="mt-2 text-[11px] text-amber-700">Add images and make sure each image has a caption before training.</p>}</section>
+function TrainingPlan({
+  datasetName,
+  imageCount,
+  captionedCount,
+  suggestion,
+  onQueue,
+  queuing,
+}: {
+  datasetName: string;
+  imageCount: number;
+  captionedCount: number;
+  suggestion?: Suggestion;
+  onQueue: (params: TrainingParams) => void;
+  queuing: boolean;
+}) {
+  const [preset, setPreset] = useState<"recommended" | "test" | "quality">(
+    "recommended",
+  );
+  const [params, setParams] = useState<TrainingParams>({
+    resolution: 1024,
+    rank: 16,
+    steps: 1000,
+    sampleEnabled: true,
+    sampleEvery: 250,
+    samplePrompt: "",
+  });
+  useEffect(() => {
+    if (suggestion)
+      setParams((current) => ({
+        ...current,
+        ...suggestion.recommended,
+        sampleEnabled: current.sampleEnabled ?? true,
+        sampleEvery: current.sampleEvery ?? 250,
+        samplePrompt: current.samplePrompt || suggestion.sample_prompt || "",
+      }));
+  }, [suggestion?.reason]);
+  const applyPreset = (next: "recommended" | "test" | "quality") => {
+    setPreset(next);
+    if (next === "recommended" && suggestion)
+      setParams((current) => ({ ...current, ...suggestion.recommended }));
+    if (next === "test")
+      setParams((current) => ({
+        ...current,
+        resolution: 768,
+        rank: 8,
+        steps: 500,
+      }));
+    if (next === "quality")
+      setParams((current) => ({
+        ...current,
+        resolution: 1024,
+        rank: 32,
+        steps: Math.max(1600, suggestion?.recommended.steps ?? 1600),
+      }));
+  };
+  const ready = imageCount > 0 && captionedCount === imageCount;
+  const selected = (name: "recommended" | "test" | "quality") =>
+    `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-violet-400 bg-violet-50 ring-1 ring-violet-200" : "border-slate-200 bg-white hover:border-slate-300"}`;
+  return (
+    <section className="training-panel">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">Training</h3>
+          <p className="mt-1 text-[11px] text-slate-500">
+            {datasetName} · {imageCount} images · {captionedCount}/{imageCount}{" "}
+            captioned
+          </p>
+        </div>
+        <span
+          className={`rounded-full px-2 py-1 text-[10px] font-semibold ${ready ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}
+        >
+          {ready ? "Ready to train" : "Complete captions first"}
+        </span>
+      </div>
+      <p className="mt-3 text-xs text-slate-600">
+        {suggestion?.reason ?? "Loading a recommendation from your dataset…"}
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <button
+          className={selected("recommended")}
+          onClick={() => applyPreset("recommended")}
+        >
+          <span className="block text-xs font-semibold text-slate-800">
+            Recommended
+          </span>
+          <span className="mt-1 block text-[10px] text-slate-500">
+            Balanced for this dataset
+          </span>
+        </button>
+        <button
+          className={selected("test")}
+          onClick={() => applyPreset("test")}
+        >
+          <span className="block text-xs font-semibold text-slate-800">
+            Fast test
+          </span>
+          <span className="mt-1 block text-[10px] text-slate-500">
+            Short run to validate setup
+          </span>
+        </button>
+        <button
+          className={selected("quality")}
+          onClick={() => applyPreset("quality")}
+        >
+          <span className="block text-xs font-semibold text-slate-800">
+            Higher detail
+          </span>
+          <span className="mt-1 block text-[10px] text-slate-500">
+            More capacity and steps
+          </span>
+        </button>
+      </div>
+      <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2">
+        <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+          Advanced options
+        </summary>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          <label>
+            Resolution
+            <input
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              type="number"
+              value={params.resolution}
+              onChange={(e) =>
+                setParams({ ...params, resolution: +e.target.value })
+              }
+            />
+          </label>
+          <label>
+            Rank
+            <input
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              type="number"
+              value={params.rank}
+              onChange={(e) => setParams({ ...params, rank: +e.target.value })}
+            />
+          </label>
+          <label>
+            Steps
+            <input
+              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              type="number"
+              value={params.steps}
+              onChange={(e) => setParams({ ...params, steps: +e.target.value })}
+            />
+          </label>
+        </div>
+        <label className="mt-3 flex items-center gap-2 !m-0 text-xs font-semibold text-slate-700">
+          <input
+            type="checkbox"
+            checked={!!params.sampleEnabled}
+            onChange={(e) =>
+              setParams({ ...params, sampleEnabled: e.target.checked })
+            }
+          />{" "}
+          Generate validation images
+        </label>
+        {params.sampleEnabled && (
+          <>
+            <label>
+              Every N steps
+              <input
+                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+                type="number"
+                min="1"
+                value={params.sampleEvery}
+                onChange={(e) =>
+                  setParams({ ...params, sampleEvery: +e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Test prompt
+              <textarea
+                className="mt-1 min-h-20 w-full rounded-md border border-slate-200 bg-white p-2 text-xs"
+                value={params.samplePrompt}
+                onChange={(e) =>
+                  setParams({ ...params, samplePrompt: e.target.value })
+                }
+              />
+            </label>
+            <p className="mt-1 text-[10px] text-slate-500">
+              {suggestion?.sample_prompt_reason}
+            </p>
+          </>
+        )}
+      </details>
+      <button
+        className="mt-3 w-full rounded-md bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={!ready || queuing}
+        onClick={() => onQueue(params)}
+      >
+        {queuing ? "Adding training run…" : "Start training"}
+      </button>
+      <p className="mt-2 text-[10px] text-slate-500">
+        Every start creates a separate run and output directory.
+      </p>
+      {!ready && (
+        <p className="mt-2 text-[11px] text-amber-700">
+          Add images and make sure each image has a caption before training.
+        </p>
+      )}
+    </section>
+  );
 }
 
 export function DatasetList() {
-  const queryClient=useQueryClient(), parentRef=useRef<HTMLDivElement>(null), [name,setName]=useState('')
-  const {data:datasets=[],isLoading}=useQuery({queryKey:['datasets'],queryFn:getDatasets})
-  const create=useMutation({mutationFn:async()=>{const r=await fetch(`${API}/api/datasets`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})});if(!r.ok)throw new Error('Could not create dataset')},onSuccess:()=>{setName('');queryClient.invalidateQueries({queryKey:['datasets']})}})
-  const virtual=useVirtualizer({count:datasets.length,getScrollElement:()=>parentRef.current,estimateSize:()=>72,overscan:8})
-  return <><header className="flex flex-wrap items-baseline gap-x-3 gap-y-1"><h2 className="text-2xl font-semibold tracking-tight">Datasets</h2><span className="text-xs text-slate-500">Create and manage training data</span></header><section className="panel mt-4 flex flex-col gap-2 sm:flex-row"><input className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs" value={name} onChange={e=>setName(e.target.value)} placeholder="Dataset name, for example: studio-portraits"/><button className="w-full shrink-0 whitespace-nowrap rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto" disabled={!name.trim()||create.isPending} onClick={()=>create.mutate()}>New dataset</button></section><section ref={parentRef} className="panel mt-3 h-[calc(100vh-174px)] overflow-auto p-0"><div style={{height:virtual.getTotalSize(),position:'relative'}}>{isLoading?<p className="p-3 text-xs text-slate-500">Loading datasets…</p>:virtual.getVirtualItems().map(row=>{const d=datasets[row.index];return <Link key={d.id} to={`/datasets/${d.id}`} className="absolute left-0 top-0 flex h-[72px] w-full items-center gap-3 border-b border-slate-100 px-3 hover:bg-slate-50" style={{transform:`translateY(${row.start}px)`}}><div className="h-10 w-10 overflow-hidden rounded-md bg-slate-100">{d.cover_path&&<img className="h-full w-full object-cover" src={`${API}/files/${d.cover_path}`}/>}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-semibold">{d.name}</h3><p className="mt-0.5 text-[11px] text-slate-500">{d.image_count} images · {new Date(`${d.created_at}Z`).toLocaleDateString()}</p></div><span className="text-slate-400">›</span></Link>})}</div></section></>
+  const queryClient = useQueryClient(),
+    parentRef = useRef<HTMLDivElement>(null),
+    [name, setName] = useState("");
+  const { data: datasets = [], isLoading } = useQuery({
+    queryKey: ["datasets"],
+    queryFn: getDatasets,
+  });
+  const create = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API}/api/datasets`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      });
+      if (!r.ok) throw new Error("Could not create dataset");
+    },
+    onSuccess: () => {
+      setName("");
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+    },
+  });
+  const virtual = useVirtualizer({
+    count: datasets.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 72,
+    overscan: 8,
+  });
+  return (
+    <>
+      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="text-2xl font-semibold tracking-tight">Datasets</h2>
+        <span className="text-xs text-slate-500">
+          Create and manage training data
+        </span>
+      </header>
+      <section className="panel mt-4 flex flex-col gap-2 sm:flex-row">
+        <input
+          className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Dataset name, for example: studio-portraits"
+        />
+        <button
+          className="w-full shrink-0 whitespace-nowrap rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto"
+          disabled={!name.trim() || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          New dataset
+        </button>
+      </section>
+      <section
+        ref={parentRef}
+        className="panel mt-3 h-[calc(100vh-174px)] overflow-auto p-0"
+      >
+        <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
+          {isLoading ? (
+            <p className="p-3 text-xs text-slate-500">Loading datasets…</p>
+          ) : (
+            virtual.getVirtualItems().map((row) => {
+              const d = datasets[row.index];
+              return (
+                <Link
+                  key={d.id}
+                  to={`/datasets/${d.id}`}
+                  className="absolute left-0 top-0 flex h-[72px] w-full items-center gap-3 border-b border-slate-100 px-3 hover:bg-slate-50"
+                  style={{ transform: `translateY(${row.start}px)` }}
+                >
+                  <div className="h-10 w-10 overflow-hidden rounded-md bg-slate-100">
+                    {d.cover_path && (
+                      <img
+                        className="h-full w-full object-cover"
+                        src={`${API}/files/${d.cover_path}`}
+                      />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="truncate text-sm font-semibold">{d.name}</h3>
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                      {d.image_count} images ·{" "}
+                      {new Date(`${d.created_at}Z`).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <span className="text-slate-400">›</span>
+                </Link>
+              );
+            })
+          )}
+        </div>
+      </section>
+    </>
+  );
 }
 
 export function DatasetDetail() {
-  const {id=''}=useParams(), navigate=useNavigate(), queryClient=useQueryClient(), filesRef=useRef<HTMLInputElement>(null), store=useStore(), [prompt,setPrompt]=useState(''), [model,setModel]=useState('gemini-3.5-flash-lite'), [selectedIndex,setSelectedIndex]=useState<number|null>(null), [captionText,setCaptionText]=useState(''), [selectedIds,setSelectedIds]=useState<Set<string>>(new Set())
-  const {data,isLoading}=useQuery({queryKey:['dataset',id],queryFn:()=>getDataset(id),enabled:!!id})
-  const {data:suggestion}=useQuery({queryKey:['training-suggestion',id],queryFn:async():Promise<Suggestion>=>(await fetch(`${API}/api/datasets/${id}/training-suggestion`)).json(),enabled:!!id})
-  const upload=useMutation({mutationFn:async(files:FileList)=>{const body=new FormData();Array.from(files).forEach(file=>body.append('files',file));const r=await fetch(`${API}/api/datasets/${id}/upload`,{method:'POST',body});if(!r.ok)throw new Error('Upload failed')},onSuccess:()=>{queryClient.invalidateQueries({queryKey:['dataset',id]});queryClient.invalidateQueries({queryKey:['datasets']})}})
-  const caption=useMutation({mutationFn:async(overwrite:boolean)=>{const r=await fetch(`${API}/api/caption`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dataset_id:id,api_key:store.apiKey||undefined,overwrite})});if(!r.ok)throw new Error('Captioning could not start')},onSuccess:()=>queryClient.invalidateQueries({queryKey:['dataset',id]})})
-  const saveSettings=useMutation({mutationFn:async()=>{const r=await fetch(`${API}/api/datasets/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({system_prompt:prompt,caption_model:model})});if(!r.ok)throw new Error('Could not save settings')},onSuccess:()=>queryClient.invalidateQueries({queryKey:['dataset',id]})})
-  const saveCaption=useMutation({mutationFn:async()=>{if(selectedIndex===null||!data)return;const image=data.images[selectedIndex];const r=await fetch(`${API}/api/images/${image.id}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({caption:captionText})});if(!r.ok)throw new Error('Could not save caption')},onSuccess:()=>queryClient.invalidateQueries({queryKey:['dataset',id]})})
-  const removeImages=useMutation({mutationFn:async()=>{const r=await fetch(`${API}/api/datasets/${id}/delete-images`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({image_ids:[...selectedIds]})});if(!r.ok)throw new Error('Could not delete images')},onSuccess:()=>{setSelectedIds(new Set());queryClient.invalidateQueries({queryKey:['dataset',id]});queryClient.invalidateQueries({queryKey:['datasets']})}})
-  const removeDataset=useMutation({mutationFn:async()=>{const r=await fetch(`${API}/api/datasets/${id}`,{method:'DELETE'});if(!r.ok)throw new Error('Could not delete dataset')},onSuccess:()=>{queryClient.invalidateQueries({queryKey:['datasets']});navigate('/datasets')}})
-  const enqueueTraining=useMutation({mutationFn:async(params:TrainingParams)=>{if(!data)return;const config={data:{folder:data.dataset.folder,resolution:params.resolution},lora:{rank:params.rank,alpha:params.rank},train:{output_dir:`outputs/${id}_lora`,steps:params.steps,batch_size:1,gradient_accumulation:1,learning_rate:0.0001,save_every:Math.min(250,params.steps),seed:42},sample:{enabled:!!params.sampleEnabled,prompt:params.samplePrompt||'',every:params.sampleEvery||250,width:1024,height:1024,seed:42}};const r=await fetch(`${API}/api/train`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({config})});if(!r.ok)throw new Error('Could not queue training')},onSuccess:()=>queryClient.invalidateQueries({queryKey:['jobs']})})
-  useEffect(()=>{if(data){store.set({folder:data.dataset.folder,images:data.images});setPrompt(data.dataset.system_prompt||DEFAULT_CAPTION_PROMPT);setModel(data.dataset.caption_model||'gemini-3.5-flash-lite')}},[data?.dataset.id])
-  useEffect(()=>{if(selectedIndex!==null&&data)setCaptionText(data.images[selectedIndex]?.caption||'')},[selectedIndex,data])
-  useEffect(()=>{const onKey=(event:KeyboardEvent)=>{if(selectedIndex===null||!data)return;if(event.key==='Escape')setSelectedIndex(null);if(event.key==='ArrowLeft')setSelectedIndex((selectedIndex-1+data.images.length)%data.images.length);if(event.key==='ArrowRight')setSelectedIndex((selectedIndex+1)%data.images.length)};window.addEventListener('keydown',onKey);return()=>window.removeEventListener('keydown',onKey)},[selectedIndex,data])
-  if(isLoading||!data)return <p className="text-xs text-slate-500">Loading dataset…</p>
-  const captionState=store.captioning, inProgress=captionState.status==='started'||captionState.status==='progress'
-  const selected=selectedIndex===null?null:data.images[selectedIndex]
-  const captionedCount=data.images.filter(image=>image.caption.trim()).length
-  const toggleImage=(imageId:string)=>setSelectedIds(current=>{const next=new Set(current);next.has(imageId)?next.delete(imageId):next.add(imageId);return next})
-  return <><Link to="/datasets" className="text-xs text-cyan-700 hover:underline">‹ All datasets</Link><header className="mt-3"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-600">TRAINING DATASET</p><h2 className="mt-1 text-2xl font-semibold tracking-tight">{data.dataset.name}</h2><p className="mt-1 text-xs text-slate-500">{data.dataset.folder}</p></header><WorkflowSteps imageCount={data.images.length} captionedCount={captionedCount}/><div className="mt-4 grid gap-3 xl:grid-cols-2"><section className="panel"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-600">STEP 1</p><h3 className="mt-1 text-sm font-semibold">Upload images</h3><p className="mt-1 text-xs text-slate-500">Add the images you want this LoRA to learn. {data.images.length?`${data.images.length} images are ready to inspect.`:'No images yet.'}</p><button className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white" onClick={()=>filesRef.current?.click()}>{upload.isPending?'Uploading…':'Upload images'}</button><input ref={filesRef} className="hidden" type="file" accept="image/*" multiple onChange={e=>e.target.files&&upload.mutate(e.target.files)}/></section><section className="panel"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-600">STEP 2</p><h3 className="mt-1 text-sm font-semibold">Generate captions</h3><p className="mt-1 text-xs text-slate-500">{captionedCount}/{data.images.length} images have captions. You can edit every caption below before training.</p>{!store.apiKey&&<p className="mt-2 text-[11px] text-amber-700">No Gemini key is saved in this browser. <Link className="font-semibold underline" to="/settings">Add one in Settings</Link>, or use a server-side GEMINI_API_KEY.</p>}<div className="mt-3 flex flex-wrap gap-2"><button className="rounded-md border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-40" disabled={inProgress||!data.images.length} onClick={()=>caption.mutate(false)}>{inProgress?'Captioning…':'Caption missing'}</button><button className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40" disabled={inProgress||!data.images.length} onClick={()=>caption.mutate(true)}>Re-caption all</button></div><CaptionSettings model={model} prompt={prompt} onModel={setModel} onPrompt={setPrompt} onSave={()=>saveSettings.mutate()} saving={saveSettings.isPending}/></section><section className="panel"><p className="text-[10px] font-bold tracking-[.18em] text-cyan-600">STEP 3</p><h3 className="mt-1 text-sm font-semibold">Review captions</h3><p className="mt-1 text-xs text-slate-500">Open any image below to inspect and edit its caption. Good captions describe the subject, style, composition, and lighting.</p><p className={`mt-3 text-xs font-semibold ${captionedCount===data.images.length&&data.images.length?'text-emerald-700':'text-amber-700'}`}>{captionedCount===data.images.length&&data.images.length?'All images are captioned. Review a few before training.':'Caption every image to unlock training.'}</p></section><TrainingPlan datasetName={data.dataset.name} imageCount={data.images.length} captionedCount={captionedCount} suggestion={suggestion} onQueue={params=>enqueueTraining.mutate(params)} queuing={enqueueTraining.isPending}/></div>{(inProgress||captionState.status==='error')&&<section className="mt-3 rounded-md border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900"><div className="flex justify-between font-semibold"><span>{captionState.status==='error'?'Captioning error':'Captioning images'}</span><span>{captionState.current} / {captionState.total}</span></div>{captionState.path&&<p className="mt-1 truncate text-[11px] text-cyan-700">{captionState.path}</p>}{captionState.error&&<p className="mt-1 text-[11px] text-red-700">{captionState.error}</p>}</section>}<section className="actionbar mt-4"><div className="text-xs text-slate-500">{enqueueTraining.isSuccess?'Training added to queue':selectedIds.size?`${selectedIds.size} images selected`:'Click an image to review its caption'}</div><div className="flex items-center gap-2">{selectedIds.size>0&&<ConfirmAction danger label={`Delete ${selectedIds.size} selected`} title="Delete selected images?" detail="Selected images, their sidecar caption files, and metadata will be permanently deleted." confirmLabel="Delete selected" onConfirm={()=>removeImages.mutate()} disabled={removeImages.isPending}/>}<ConfirmAction danger label="Delete dataset" title="Delete this dataset?" detail="All images, captions, and metadata in this dataset will be permanently deleted." confirmLabel="Delete dataset" onConfirm={()=>removeDataset.mutate()} disabled={removeDataset.isPending}/></div></section><section className="mt-4 grid grid-cols-3 gap-3 md:grid-cols-5 xl:grid-cols-7">{data.images.map((image,index)=><div key={image.id} className={`relative overflow-hidden rounded-md border bg-white ${selectedIds.has(image.id)?'border-cyan-500 ring-2 ring-cyan-200':'border-slate-200'}`}><button className="block w-full text-left" onClick={()=>setSelectedIndex(index)}><img className="aspect-square w-full object-cover" src={`${API}/files/${image.path}`}/><p className="line-clamp-2 p-1.5 text-[10px] text-slate-500">{image.caption||'No caption yet'}</p></button><label className="absolute left-1 top-1 !m-0 rounded bg-white/90 p-1"><input type="checkbox" checked={selectedIds.has(image.id)} onChange={()=>toggleImage(image.id)}/></label></div>)}</section>{selected&&<div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-200/80 p-6" onClick={()=>setSelectedIndex(null)}><div className="relative grid max-h-full w-full max-w-6xl grid-cols-[minmax(0,1fr)_300px] overflow-hidden rounded-lg bg-white shadow-2xl" onClick={event=>event.stopPropagation()}><div className="flex min-w-0 flex-col bg-slate-100 p-3"><div className="mb-2 flex items-center justify-between text-xs text-slate-600"><span>{selectedIndex!+1} / {data.images.length}</span><button className="font-semibold hover:text-slate-950" onClick={()=>setSelectedIndex(null)}>Close · Esc</button></div><div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-200"><img className="absolute inset-0 h-full w-full object-contain" src={`${API}/files/${selected.path}`}/></div><div className="mt-2 flex justify-between"><button className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50" onClick={()=>setSelectedIndex((selectedIndex!-1+data.images.length)%data.images.length)}>← Previous</button><button className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50" onClick={()=>setSelectedIndex((selectedIndex!+1)%data.images.length)}>Next →</button></div></div><aside className="flex min-h-0 flex-col p-3"><h3 className="text-sm font-bold">Caption</h3><p className="mt-1 text-[10px] text-slate-500">Edit and save the sidecar .txt caption.</p><textarea className="mt-3 min-h-0 flex-1 resize-none rounded-md border border-slate-200 p-2 text-xs outline-none focus:border-cyan-500" value={captionText} onChange={e=>setCaptionText(e.target.value)}/><button className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40" disabled={saveCaption.isPending} onClick={()=>saveCaption.mutate()}>{saveCaption.isPending?'Saving…':'Save caption'}</button></aside></div></div>}</>
+  const { id = "" } = useParams(),
+    navigate = useNavigate(),
+    queryClient = useQueryClient(),
+    filesRef = useRef<HTMLInputElement>(null),
+    store = useStore(),
+    [prompt, setPrompt] = useState(""),
+    [model, setModel] = useState("gemini-3.5-flash-lite"),
+    [selectedIndex, setSelectedIndex] = useState<number | null>(null),
+    [captionText, setCaptionText] = useState(""),
+    [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const { data, isLoading } = useQuery({
+    queryKey: ["dataset", id],
+    queryFn: () => getDataset(id),
+    enabled: !!id,
+  });
+  const { data: suggestion } = useQuery({
+    queryKey: ["training-suggestion", id],
+    queryFn: async (): Promise<Suggestion> =>
+      (await fetch(`${API}/api/datasets/${id}/training-suggestion`)).json(),
+    enabled: !!id,
+  });
+  const upload = useMutation({
+    mutationFn: async (files: FileList) => {
+      const body = new FormData();
+      Array.from(files).forEach((file) => body.append("files", file));
+      const r = await fetch(`${API}/api/datasets/${id}/upload`, {
+        method: "POST",
+        body,
+      });
+      if (!r.ok) throw new Error("Upload failed");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] });
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+    },
+  });
+  const caption = useMutation({
+    mutationFn: async (overwrite: boolean) => {
+      const r = await fetch(`${API}/api/caption`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dataset_id: id,
+          api_key: store.apiKey || undefined,
+          overwrite,
+        }),
+      });
+      if (!r.ok) throw new Error("Captioning could not start");
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+  });
+  const saveSettings = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API}/api/datasets/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ system_prompt: prompt, caption_model: model }),
+      });
+      if (!r.ok) throw new Error("Could not save settings");
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+  });
+  const saveCaption = useMutation({
+    mutationFn: async () => {
+      if (selectedIndex === null || !data) return;
+      const image = data.images[selectedIndex];
+      const r = await fetch(`${API}/api/images/${image.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ caption: captionText }),
+      });
+      if (!r.ok) throw new Error("Could not save caption");
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+  });
+  const removeImages = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API}/api/datasets/${id}/delete-images`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image_ids: [...selectedIds] }),
+      });
+      if (!r.ok) throw new Error("Could not delete images");
+    },
+    onSuccess: () => {
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] });
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+    },
+  });
+  const removeDataset = useMutation({
+    mutationFn: async () => {
+      const r = await fetch(`${API}/api/datasets/${id}`, { method: "DELETE" });
+      if (!r.ok) throw new Error("Could not delete dataset");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      navigate("/datasets");
+    },
+  });
+  const enqueueTraining = useMutation({
+    mutationFn: async (params: TrainingParams) => {
+      if (!data) return;
+      const config = {
+        data: { folder: data.dataset.folder, resolution: params.resolution },
+        lora: { rank: params.rank, alpha: params.rank },
+        train: {
+          output_dir: `outputs/${id}_lora`,
+          steps: params.steps,
+          batch_size: 1,
+          gradient_accumulation: 1,
+          learning_rate: 0.0001,
+          save_every: Math.min(250, params.steps),
+          seed: 42,
+        },
+        sample: {
+          enabled: !!params.sampleEnabled,
+          prompt: params.samplePrompt || "",
+          every: params.sampleEvery || 250,
+          width: 1024,
+          height: 1024,
+          seed: 42,
+        },
+      };
+      const r = await fetch(`${API}/api/train`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config }),
+      });
+      if (!r.ok) throw new Error("Could not queue training");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["jobs"] }),
+  });
+  useEffect(() => {
+    if (data) {
+      store.set({ folder: data.dataset.folder, images: data.images });
+      setPrompt(data.dataset.system_prompt || DEFAULT_CAPTION_PROMPT);
+      setModel(data.dataset.caption_model || "gemini-3.5-flash-lite");
+    }
+  }, [data?.dataset.id]);
+  useEffect(() => {
+    if (selectedIndex !== null && data)
+      setCaptionText(data.images[selectedIndex]?.caption || "");
+  }, [selectedIndex, data]);
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (selectedIndex === null || !data) return;
+      if (event.key === "Escape") setSelectedIndex(null);
+      if (event.key === "ArrowLeft")
+        setSelectedIndex(
+          (selectedIndex - 1 + data.images.length) % data.images.length,
+        );
+      if (event.key === "ArrowRight")
+        setSelectedIndex((selectedIndex + 1) % data.images.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedIndex, data]);
+  if (isLoading || !data)
+    return <p className="text-xs text-slate-500">Loading dataset…</p>;
+  const captionState = store.captioning,
+    inProgress =
+      captionState.status === "started" || captionState.status === "progress";
+  const selected = selectedIndex === null ? null : data.images[selectedIndex];
+  const captionedCount = data.images.filter((image) =>
+    image.caption.trim(),
+  ).length;
+  const toggleImage = (imageId: string) =>
+    setSelectedIds((current) => {
+      const next = new Set(current);
+      next.has(imageId) ? next.delete(imageId) : next.add(imageId);
+      return next;
+    });
+  return (
+    <div className="dataset-detail">
+      <main className="dataset-main">
+        <header className="dataset-header">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <Link
+                to="/datasets"
+                className="shrink-0 text-xs font-semibold text-cyan-700 hover:underline"
+              >
+                Datasets
+              </Link>
+              <span className="text-xs text-slate-300">/</span>
+              <h2 className="truncate text-2xl font-semibold tracking-tight">
+                {data.dataset.name}
+              </h2>
+            </div>
+            <p className="mt-1 truncate text-xs text-slate-500">
+              {data.dataset.folder}
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+            {data.images.length} images · {captionedCount} captioned
+          </span>
+        </header>
+
+        <section className="dataset-toolbar">
+          <div className="dataset-toolbar-section dataset-upload-tools">
+            <h3 className="text-sm font-semibold">Upload images</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              Add the images you want this LoRA to learn.{" "}
+              {data.images.length
+                ? `${data.images.length} images are ready to inspect.`
+                : "No images yet."}
+            </p>
+            <button
+              className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white"
+              onClick={() => filesRef.current?.click()}
+            >
+              {upload.isPending ? "Uploading…" : "Upload images"}
+            </button>
+            <input
+              ref={filesRef}
+              className="hidden"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => e.target.files && upload.mutate(e.target.files)}
+            />
+          </div>
+          <div className="dataset-toolbar-section dataset-caption-tools">
+            <h3 className="text-sm font-semibold">Generate captions</h3>
+            <p className="mt-1 text-xs text-slate-500">
+              {captionedCount}/{data.images.length} images have captions. You
+              can edit every caption below before training.
+            </p>
+            {!store.apiKey && (
+              <p className="mt-2 text-[11px] text-amber-700">
+                No Gemini key is saved in this browser.{" "}
+                <Link className="font-semibold underline" to="/settings">
+                  Add one in Settings
+                </Link>
+                , or use a server-side GEMINI_API_KEY.
+              </p>
+            )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                className="rounded-md border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-40"
+                disabled={inProgress || !data.images.length}
+                onClick={() => caption.mutate(false)}
+              >
+                {inProgress ? "Captioning…" : "Caption missing"}
+              </button>
+              <button
+                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+                disabled={inProgress || !data.images.length}
+                onClick={() => caption.mutate(true)}
+              >
+                Re-caption all
+              </button>
+            </div>
+            <CaptionSettings
+              model={model}
+              prompt={prompt}
+              onModel={setModel}
+              onPrompt={setPrompt}
+              onSave={() => saveSettings.mutate()}
+              saving={saveSettings.isPending}
+            />
+          </div>
+        </section>
+        {(inProgress || captionState.status === "error") && (
+          <section className="mt-3 rounded-md border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
+            <div className="flex justify-between font-semibold">
+              <span>
+                {captionState.status === "error"
+                  ? "Captioning error"
+                  : "Captioning images"}
+              </span>
+              <span>
+                {captionState.current} / {captionState.total}
+              </span>
+            </div>
+            {captionState.path && (
+              <p className="mt-1 truncate text-[11px] text-cyan-700">
+                {captionState.path}
+              </p>
+            )}
+            {captionState.error && (
+              <p className="mt-1 text-[11px] text-red-700">
+                {captionState.error}
+              </p>
+            )}
+          </section>
+        )}
+        <section className="actionbar mt-4">
+          <div className="text-xs text-slate-500">
+            {enqueueTraining.isSuccess
+              ? "Training added to queue"
+              : selectedIds.size
+                ? `${selectedIds.size} images selected`
+                : "Click an image to review its caption"}
+          </div>
+          <div className="flex items-center gap-2">
+            {selectedIds.size > 0 && (
+              <ConfirmAction
+                danger
+                label={`Delete ${selectedIds.size} selected`}
+                title="Delete selected images?"
+                detail="Selected images, their sidecar caption files, and metadata will be permanently deleted."
+                confirmLabel="Delete selected"
+                onConfirm={() => removeImages.mutate()}
+                disabled={removeImages.isPending}
+              />
+            )}
+            <ConfirmAction
+              danger
+              label="Delete dataset"
+              title="Delete this dataset?"
+              detail="All images, captions, and metadata in this dataset will be permanently deleted."
+              confirmLabel="Delete dataset"
+              onConfirm={() => removeDataset.mutate()}
+              disabled={removeDataset.isPending}
+            />
+          </div>
+        </section>
+        <section className="dataset-gallery">
+          {data.images.map((image, index) => (
+            <div
+              key={image.id}
+              className={`dataset-image-card ${selectedIds.has(image.id) ? "border-cyan-500 ring-2 ring-cyan-200" : "border-slate-200"}`}
+            >
+              <button
+                className="block w-full text-left"
+                onClick={() => setSelectedIndex(index)}
+              >
+                <img
+                  className="aspect-square w-full object-cover"
+                  src={`${API}/files/${image.path}`}
+                />
+                <p className="dataset-image-caption">
+                  {image.caption || "No caption yet"}
+                </p>
+              </button>
+              <label className="absolute left-1 top-1 !m-0 rounded bg-white/90 p-1">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(image.id)}
+                  onChange={() => toggleImage(image.id)}
+                />
+              </label>
+            </div>
+          ))}
+        </section>
+      </main>
+
+      <aside className="dataset-aside" aria-label="Training settings">
+        <TrainingPlan
+          datasetName={data.dataset.name}
+          imageCount={data.images.length}
+          captionedCount={captionedCount}
+          suggestion={suggestion}
+          onQueue={(params) => enqueueTraining.mutate(params)}
+          queuing={enqueueTraining.isPending}
+        />
+      </aside>
+
+      {selected && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-200/80 p-6"
+          onClick={() => setSelectedIndex(null)}
+        >
+          <div
+            className="relative grid max-h-full w-full max-w-6xl grid-cols-[minmax(0,1fr)_300px] overflow-hidden rounded-lg bg-white shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex min-w-0 flex-col bg-slate-100 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
+                <span>
+                  {selectedIndex! + 1} / {data.images.length}
+                </span>
+                <button
+                  className="font-semibold hover:text-slate-950"
+                  onClick={() => setSelectedIndex(null)}
+                >
+                  Close · Esc
+                </button>
+              </div>
+              <div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-200">
+                <img
+                  className="absolute inset-0 h-full w-full object-contain"
+                  src={`${API}/files/${selected.path}`}
+                />
+              </div>
+              <div className="mt-2 flex justify-between">
+                <button
+                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                  onClick={() =>
+                    setSelectedIndex(
+                      (selectedIndex! - 1 + data.images.length) %
+                        data.images.length,
+                    )
+                  }
+                >
+                  ← Previous
+                </button>
+                <button
+                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                  onClick={() =>
+                    setSelectedIndex((selectedIndex! + 1) % data.images.length)
+                  }
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+            <aside className="flex min-h-0 flex-col p-3">
+              <h3 className="text-sm font-bold">Caption</h3>
+              <p className="mt-1 text-[10px] text-slate-500">
+                Edit and save the sidecar .txt caption.
+              </p>
+              <textarea
+                className="mt-3 min-h-0 flex-1 resize-none rounded-md border border-slate-200 p-2 text-xs outline-none focus:border-cyan-500"
+                value={captionText}
+                onChange={(e) => setCaptionText(e.target.value)}
+              />
+              <button
+                className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                disabled={saveCaption.isPending}
+                onClick={() => saveCaption.mutate()}
+              >
+                {saveCaption.isPending ? "Saving…" : "Save caption"}
+              </button>
+            </aside>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
