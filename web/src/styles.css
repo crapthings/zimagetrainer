@@ -808,7 +808,7 @@
   .training-add-prompt:hover {
     color: var(--color-olive-900);
   }
-  .training-validation {
+  .training-panel .training-validation {
     margin-top: 16px;
   }
   .validation-frequency {
@@ -1293,7 +1293,7 @@
   .training-validation,
   .training-output {
     border: 1px solid var(--app-border);
-    border-radius: 14px;
+    border-radius: 12px;
     background: var(--app-surface);
     padding: var(--training-space);
   }
