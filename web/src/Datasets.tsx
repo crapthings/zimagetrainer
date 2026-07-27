@@ -823,7 +823,9 @@ function TrainingPlan({
                       {validationSamples.length > 1 && (
                         <button
                           type="button"
+                          className="validation-prompt-remove"
                           aria-label={`Remove validation prompt ${index + 1}`}
+                          title="Remove prompt"
                           onClick={() =>
                             setParams({
                               ...params,
@@ -833,7 +835,21 @@ function TrainingPlan({
                             })
                           }
                         >
-                          Remove
+                          <svg
+                            aria-hidden="true"
+                            viewBox="0 0 16 16"
+                            width="14"
+                            height="14"
+                          >
+                            <path
+                              d="M3.5 4.5h9m-5.5-2h2l.75 2h-3.5l.75-2Zm-2 2 .5 8h5l.5-8M7 7v3m2-3v3"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth="1.25"
+                            />
+                          </svg>
                         </button>
                       )}
                     </div>
