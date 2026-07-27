@@ -175,13 +175,23 @@
     min-height: 100vh;
     padding: 24px 28px;
   }
+  .app-content:has(.dataset-detail) {
+    height: 100vh;
+    overflow: hidden;
+  }
   .dataset-detail {
     --dataset-aside-width: clamp(300px, 24vw, 360px);
+    height: 100%;
     min-width: 0;
     padding-right: calc(var(--dataset-aside-width) - 10px);
   }
   .dataset-main {
+    height: 100%;
     min-width: 0;
+    overflow-y: auto;
+    padding-right: 8px;
+    scrollbar-color: var(--color-olive-300) transparent;
+    scrollbar-width: thin;
   }
   .dataset-header {
     display: flex;
@@ -458,6 +468,10 @@
     z-index: 20;
     width: var(--dataset-aside-width);
     overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .dataset-aside::-webkit-scrollbar {
+    display: none;
   }
   .training-panel {
     min-height: 100%;
@@ -728,9 +742,6 @@
     font-weight: 700;
   }
   .training-panel-actions {
-    position: sticky;
-    bottom: -16px;
-    z-index: 5;
     margin: 16px -16px -16px;
     border-top: 1px solid var(--color-olive-100);
     background: color-mix(
@@ -860,7 +871,17 @@
 }
 
 @media (max-width: 1279px) {
+  .app-content:has(.dataset-detail) {
+    height: auto;
+    overflow: visible;
+  }
   .dataset-detail {
+    height: auto;
+    padding-right: 0;
+  }
+  .dataset-main {
+    height: auto;
+    overflow: visible;
     padding-right: 0;
   }
   .dataset-aside {
