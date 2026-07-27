@@ -118,9 +118,11 @@
     width: 6px;
     height: 6px;
     border-radius: 999px;
-    background: var(--color-olive-400);
+    background: transparent;
     content: "";
+    opacity: 0;
     transition:
+      opacity 0.16s ease,
       background 0.16s ease,
       box-shadow 0.16s ease;
   }
@@ -141,6 +143,7 @@
     background: var(--color-olive-700);
     box-shadow: 0 0 0 4px
       color-mix(in oklab, var(--color-olive-500) 18%, transparent);
+    opacity: 1;
   }
   .app-sidebar-footer {
     margin-top: auto;
