@@ -2,6 +2,8 @@ import { autoUpdate, flip, FloatingPortal, offset, shift, useClick, useDismiss, 
 import { useState } from 'react'
 
 const models = [
+  { id: 'gemini-3.5-flash-lite', name: 'Gemini 3.5 Flash-Lite', detail: 'Fast, cost-efficient default for high-volume image captions' },
+  { id: 'gemini-3.6-flash', name: 'Gemini 3.6 Flash', detail: 'Stronger multimodal reasoning for more detailed captions' },
   { id: 'gemini-3.1-flash-lite', name: 'Gemini 3.1 Flash Lite', detail: 'Fastest and most cost-efficient for batch captions' },
   { id: 'gemini-3.1-flash-image', name: 'Gemini 3.1 Flash', detail: 'Higher-quality visual model for detailed captions' },
 ]

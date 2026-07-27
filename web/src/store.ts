@@ -8,7 +8,7 @@ type State = {
   set: (patch: Partial<State>) => void; addLog: (line:string) => void
 }
 export const useStore = create<State>()(persist((set) => ({
-  folder: 'data/train', apiKey: '', model: 'gemini-3.1-flash-lite', images: [], captioning: {status:'idle',current:0,total:0},
+  folder: 'data/train', apiKey: '', model: 'gemini-3.5-flash-lite', images: [], captioning: {status:'idle',current:0,total:0},
   training: {status: 'idle', step: 0, total: 1000, samplePaths: [], lossHistory: [], logs: []},
   set: (patch) => set(patch), addLog: (line) => set((s) => ({training: {...s.training, logs: [...s.training.logs.slice(-99), line]}}))
 }), {

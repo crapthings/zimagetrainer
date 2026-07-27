@@ -62,7 +62,7 @@ class Database:
             if "system_prompt" not in columns:
                 self.connection.execute("ALTER TABLE datasets ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''")
             if "caption_model" not in columns:
-                self.connection.execute("ALTER TABLE datasets ADD COLUMN caption_model TEXT NOT NULL DEFAULT 'gemini-3.1-flash-lite'")
+                self.connection.execute("ALTER TABLE datasets ADD COLUMN caption_model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite'")
             job_columns = {row[1] for row in self.connection.execute("PRAGMA table_info(jobs)")}
             if "error" not in job_columns:
                 self.connection.execute("ALTER TABLE jobs ADD COLUMN error TEXT")
@@ -142,7 +142,7 @@ class Database:
 
     def create_dataset(self, dataset_id: str, name: str, folder: str) -> dict[str, Any]:
         with self.lock, self.connection:
-            self.connection.execute("INSERT INTO datasets (id, name, folder) VALUES (?, ?, ?)", (dataset_id, name, folder))
+            self.connection.execute("INSERT INTO datasets (id, name, folder, caption_model) VALUES (?, ?, ?, ?)", (dataset_id, name, folder, "gemini-3.5-flash-lite"))
         return self.dataset(dataset_id)  # type: ignore[return-value]
 
     def datasets(self) -> list[dict[str, Any]]:

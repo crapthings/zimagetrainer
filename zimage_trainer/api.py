@@ -54,7 +54,7 @@ class DatasetCreateRequest(BaseModel):
 
 class DatasetUpdateRequest(BaseModel):
     system_prompt: str = Field(max_length=4000)
-    caption_model: str = "gemini-3.1-flash-lite"
+    caption_model: str = "gemini-3.5-flash-lite"
 
 
 class ImageUpdateRequest(BaseModel):
@@ -282,7 +282,7 @@ async def caption(request: CaptionRequest) -> dict[str, Any]:
         folder = ROOT / dataset["folder"]
         images = [{"path": image["path"], "caption": image["caption"]} for image in database.images(request.dataset_id)]
         system_prompt = request.system_prompt or dataset.get("system_prompt") or DEFAULT_CAPTION_PROMPT
-        model = request.model or dataset.get("caption_model") or "gemini-3.1-flash-lite"
+        model = request.model or dataset.get("caption_model") or "gemini-3.5-flash-lite"
     else:
         folder = resolve_folder(request.folder)
         images = list_images(folder)
