@@ -190,6 +190,117 @@ function ConfirmAction({
   );
 }
 
+function DatasetActions({
+  onDelete,
+  deleting,
+}: {
+  onDelete: () => void;
+  deleting: boolean;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const menu = useFloating({
+    open: menuOpen,
+    onOpenChange: setMenuOpen,
+    placement: "bottom-end",
+    middleware: [offset(6), flip(), shift({ padding: 12 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const confirmation = useFloating({
+    open: confirmOpen,
+    onOpenChange: setConfirmOpen,
+    placement: "bottom-end",
+    middleware: [offset(6), flip(), shift({ padding: 12 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const menuInteractions = useInteractions([
+    useClick(menu.context),
+    useDismiss(menu.context),
+    useRole(menu.context, { role: "menu" }),
+  ]);
+  const confirmInteractions = useInteractions([
+    useDismiss(confirmation.context),
+    useRole(confirmation.context, { role: "dialog" }),
+  ]);
+  const setReference = (node: HTMLButtonElement | null) => {
+    menu.refs.setReference(node);
+    confirmation.refs.setReference(node);
+  };
+
+  return (
+    <>
+      <button
+        ref={setReference}
+        className="dataset-menu-trigger"
+        aria-label="Dataset actions"
+        disabled={deleting}
+        {...menuInteractions.getReferenceProps()}
+      >
+        <span aria-hidden="true">•••</span>
+      </button>
+
+      {menuOpen && (
+        <FloatingPortal>
+          <div
+            ref={menu.refs.setFloating}
+            style={menu.floatingStyles}
+            className="dataset-menu"
+            {...menuInteractions.getFloatingProps()}
+          >
+            <button
+              className="dataset-menu-danger"
+              role="menuitem"
+              onClick={() => {
+                setMenuOpen(false);
+                setConfirmOpen(true);
+              }}
+            >
+              Delete dataset
+            </button>
+          </div>
+        </FloatingPortal>
+      )}
+
+      {confirmOpen && (
+        <FloatingPortal>
+          <div
+            ref={confirmation.refs.setFloating}
+            style={confirmation.floatingStyles}
+            className="dataset-delete-confirm"
+            {...confirmInteractions.getFloatingProps()}
+          >
+            <h3 className="text-xs font-bold text-slate-900">
+              Delete this dataset?
+            </h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+              All images, captions, and metadata in this dataset will be
+              permanently deleted.
+            </p>
+            <div className="mt-3 flex justify-end gap-2">
+              <button
+                className="rounded-md px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                onClick={() => setConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-40"
+                disabled={deleting}
+                onClick={() => {
+                  onDelete();
+                  setConfirmOpen(false);
+                }}
+              >
+                {deleting ? "Deleting…" : "Delete dataset"}
+              </button>
+            </div>
+          </div>
+        </FloatingPortal>
+      )}
+    </>
+  );
+}
+
 function TrainingPlan({
   datasetName,
   imageCount,
@@ -688,9 +799,15 @@ export function DatasetDetail() {
               {data.dataset.folder}
             </p>
           </div>
-          <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-            {data.images.length} images · {captionedCount} captioned
-          </span>
+          <div className="dataset-header-actions">
+            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
+              {data.images.length} images · {captionedCount} captioned
+            </span>
+            <DatasetActions
+              onDelete={() => removeDataset.mutate()}
+              deleting={removeDataset.isPending}
+            />
+          </div>
         </header>
 
         <section className="dataset-toolbar">
@@ -790,8 +907,8 @@ export function DatasetDetail() {
                 ? `${selectedIds.size} images selected`
                 : "Click an image to review its caption"}
           </div>
-          <div className="flex items-center gap-2">
-            {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
               <ConfirmAction
                 danger
                 label={`Delete ${selectedIds.size} selected`}
@@ -801,17 +918,8 @@ export function DatasetDetail() {
                 onConfirm={() => removeImages.mutate()}
                 disabled={removeImages.isPending}
               />
-            )}
-            <ConfirmAction
-              danger
-              label="Delete dataset"
-              title="Delete this dataset?"
-              detail="All images, captions, and metadata in this dataset will be permanently deleted."
-              confirmLabel="Delete dataset"
-              onConfirm={() => removeDataset.mutate()}
-              disabled={removeDataset.isPending}
-            />
-          </div>
+            </div>
+          )}
         </section>
         <section className="dataset-gallery">
           {data.images.map((image, index) => (
