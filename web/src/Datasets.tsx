@@ -1021,7 +1021,7 @@ export function DatasetDetail() {
                   src={`${API}/files/${image.path}`}
                 />
                 <p className="dataset-image-caption">
-                  {image.caption || "No caption yet"}
+                  <span>{image.caption || "No caption yet"}</span>
                 </p>
               </button>
               <label className="absolute left-1 top-1 !m-0 rounded bg-white/90 p-1">
