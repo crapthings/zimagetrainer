@@ -11,6 +11,19 @@ import { useStore } from "./store";
 import { DatasetDetail, DatasetList } from "./Datasets";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GlobalErrorNotice } from "./GlobalErrorNotice";
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useClick,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react";
 
 export const API = "";
 const field =
@@ -524,6 +537,156 @@ function eventPresentation(event: TimelineEvent) {
   };
 }
 
+function runDate(value: string) {
+  return new Date(`${value}Z`);
+}
+
+function runDateGroup(value: string) {
+  const date = runDate(value);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (left: Date, right: Date) =>
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate();
+  if (sameDay(date, today)) return "Today";
+  if (sameDay(date, yesterday)) return "Yesterday";
+  return date.toLocaleDateString([], {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function TrainingRunSelect({
+  jobs,
+  value,
+  onChange,
+}: {
+  jobs: [string, Job][];
+  value?: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const selected = jobs.find(([id]) => id === value);
+  const floating = useFloating({
+    open,
+    onOpenChange: (nextOpen) => {
+      setOpen(nextOpen);
+      if (!nextOpen) setSearch("");
+    },
+    placement: "bottom-end",
+    middleware: [offset(6), flip({ padding: 12 }), shift({ padding: 12 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const interactions = useInteractions([
+    useClick(floating.context),
+    useDismiss(floating.context),
+    useRole(floating.context, { role: "listbox" }),
+  ]);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const filtered = jobs.filter(([id, job]) => {
+    const date = runDate(job.created_at);
+    return `${id} ${job.status} ${date.toLocaleString()} ${runDateGroup(job.created_at)}`
+      .toLocaleLowerCase()
+      .includes(normalizedSearch);
+  });
+  const groups = filtered.reduce(
+    (result, item) => {
+      const label = runDateGroup(item[1].created_at);
+      const existing = result.find((group) => group.label === label);
+      if (existing) existing.items.push(item);
+      else result.push({ label, items: [item] });
+      return result;
+    },
+    [] as { label: string; items: [string, Job][] }[],
+  );
+
+  return (
+    <>
+      <button
+        ref={floating.refs.setReference}
+        className="training-run-trigger"
+        aria-label="Select training run"
+        {...interactions.getReferenceProps()}
+      >
+        <span className={`run-status-dot run-status-${selected?.[1].status}`} />
+        <span>
+          <strong className="capitalize">{selected?.[1].status ?? "Select run"}</strong>
+          {selected && (
+            <small>{runDate(selected[1].created_at).toLocaleString()}</small>
+          )}
+        </span>
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="m4 6 4 4 4-4" />
+        </svg>
+      </button>
+      {open && (
+        <FloatingPortal>
+          <FloatingFocusManager context={floating.context} modal={false}>
+            <div
+              ref={floating.refs.setFloating}
+              style={floating.floatingStyles}
+              className="training-run-menu"
+              {...interactions.getFloatingProps()}
+            >
+              <div className="training-run-search">
+                <svg viewBox="0 0 20 20" aria-hidden="true">
+                  <circle cx="9" cy="9" r="5.5" />
+                  <path d="m13 13 4 4" />
+                </svg>
+                <input
+                  autoFocus
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  placeholder="Search runs"
+                  aria-label="Search training runs"
+                />
+              </div>
+              <div className="training-run-options">
+                {groups.length ? (
+                  groups.map((group) => (
+                    <section key={group.label}>
+                      <h4>{group.label}</h4>
+                      {group.items.map(([id, job]) => (
+                        <button
+                          key={id}
+                          role="option"
+                          aria-selected={id === value}
+                          onClick={() => {
+                            onChange(id);
+                            setOpen(false);
+                          }}
+                        >
+                          <span className={`run-status-dot run-status-${job.status}`} />
+                          <span>
+                            <strong className="capitalize">{job.status}</strong>
+                            <small>{id}</small>
+                          </span>
+                          <time>
+                            {runDate(job.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </time>
+                        </button>
+                      ))}
+                    </section>
+                  ))
+                ) : (
+                  <p className="training-run-no-results">No matching runs</p>
+                )}
+              </div>
+            </div>
+          </FloatingFocusManager>
+        </FloatingPortal>
+      )}
+    </>
+  );
+}
+
 function TrainingMonitor() {
   const s = useStore();
   const [selectedId, setSelectedId] = useState<string>();
@@ -595,22 +758,12 @@ function TrainingMonitor() {
         </div>
         <div className="training-header-actions">
           {jobs.length > 0 && (
-            <select
-              className="training-run-select"
+            <TrainingRunSelect
+              jobs={[...current, ...history]}
               value={activeId}
-              onChange={(event) => setSelectedId(event.target.value)}
-              aria-label="Select training run"
-            >
-              {[...current, ...history].map(([id, job]) => (
-                <option key={id} value={id}>
-                  {job.status} · {new Date(`${job.created_at}Z`).toLocaleString()}
-                </option>
-              ))}
-            </select>
+              onChange={setSelectedId}
+            />
           )}
-          <Link className="training-datasets-link" to="/datasets">
-            Datasets
-          </Link>
         </div>
       </header>
 

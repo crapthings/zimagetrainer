@@ -982,30 +982,144 @@
     align-items: center;
     gap: 8px;
   }
-  .training-run-select {
-    max-width: 320px;
+  .training-run-trigger {
+    display: grid;
+    min-width: 290px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
     border: 1px solid var(--app-border);
-    border-radius: 9px;
+    border-radius: 11px;
     background: var(--app-surface);
-    padding: 8px 32px 8px 10px;
-    color: var(--color-olive-700);
+    padding: 8px 10px;
+    text-align: left;
+  }
+  .training-run-trigger:hover {
+    border-color: var(--color-olive-300);
+  }
+  .training-run-trigger:focus-visible {
+    border-color: var(--color-olive-500);
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-olive-100);
+  }
+  .training-run-trigger > span:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 7px;
+  }
+  .training-run-trigger strong {
+    color: var(--color-olive-800);
+    font-size: 11px;
+  }
+  .training-run-trigger small {
+    overflow: hidden;
+    color: var(--color-olive-400);
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .training-run-trigger > svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: var(--color-olive-500);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.5;
+  }
+  .training-run-menu {
+    z-index: 50;
+    width: min(380px, calc(100vw - 24px));
+    overflow: hidden;
+    border: 1px solid var(--color-olive-200);
+    border-radius: 13px;
+    background: white;
+    box-shadow:
+      0 20px 50px rgba(20, 25, 15, 0.14),
+      0 2px 8px rgba(20, 25, 15, 0.08);
+  }
+  .training-run-search {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--color-olive-100);
+    padding: 10px 12px;
+  }
+  .training-run-search svg {
+    width: 15px;
+    height: 15px;
+    fill: none;
+    stroke: var(--color-olive-400);
+    stroke-linecap: round;
+    stroke-width: 1.5;
+  }
+  .training-run-search input {
+    min-width: 0;
+    color: var(--color-olive-800);
     font-size: 11px;
     outline: none;
   }
-  .training-run-select:focus {
-    border-color: var(--color-olive-500);
-    box-shadow: 0 0 0 3px var(--color-olive-100);
+  .training-run-search input::placeholder {
+    color: var(--color-olive-400);
   }
-  .training-datasets-link {
-    border-radius: 9px;
-    background: var(--color-olive-900);
-    padding: 8px 12px;
-    color: white;
-    font-size: 11px;
+  .training-run-options {
+    max-height: min(420px, 60vh);
+    overflow: auto;
+    padding: 6px;
+  }
+  .training-run-options section + section {
+    margin-top: 4px;
+  }
+  .training-run-options h4 {
+    padding: 7px 8px 5px;
+    color: var(--color-olive-400);
+    font-size: 9px;
     font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
   }
-  .training-datasets-link:hover {
-    background: var(--color-olive-700);
+  .training-run-options section > button {
+    display: grid;
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    border-radius: 8px;
+    padding: 8px;
+    text-align: left;
+  }
+  .training-run-options section > button:hover,
+  .training-run-options section > button[aria-selected="true"] {
+    background: var(--color-olive-100);
+  }
+  .training-run-options section > button > span:nth-child(2) {
+    display: grid;
+    min-width: 0;
+  }
+  .training-run-options strong {
+    color: var(--color-olive-800);
+    font-size: 11px;
+  }
+  .training-run-options small {
+    overflow: hidden;
+    color: var(--color-olive-400);
+    font-family: monospace;
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .training-run-options time {
+    color: var(--color-olive-500);
+    font-size: 10px;
+    font-variant-numeric: tabular-nums;
+  }
+  .training-run-no-results {
+    padding: 28px 12px;
+    color: var(--color-olive-400);
+    font-size: 11px;
+    text-align: center;
   }
   .training-empty {
     display: flex;
@@ -1435,8 +1549,8 @@
   .training-header-actions {
     align-items: stretch;
   }
-  .training-run-select {
-    max-width: 210px;
+  .training-run-trigger {
+    min-width: 240px;
   }
   .training-statusbar {
     align-items: flex-start;
@@ -1488,12 +1602,11 @@
     display: grid;
   }
   .training-header-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
+    display: block;
   }
-  .training-run-select {
+  .training-run-trigger {
     width: 100%;
-    max-width: none;
+    min-width: 0;
   }
   .training-metrics {
     grid-template-columns: 1fr 1fr;
