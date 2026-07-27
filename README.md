@@ -56,6 +56,13 @@ and checkpoint image, so one training run can be compared across several
 subjects, styles, and output formats. Existing configurations that use
 `sample.prompts` or a single `sample.prompt` remain supported.
 
+The dataset-aware training recommendation follows the trainer's real sampling
+loop: with the default batch size of one, `steps / image count` is approximately
+how many times each image is presented. Smaller datasets receive more
+presentations per image, larger datasets fewer, and the UI shows this estimate
+instead of treating a fixed step count as universally valid. The short setup
+check is intended only to verify the environment and output path.
+
 ## Use the exported LoRA
 
 ```powershell

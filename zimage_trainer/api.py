@@ -26,6 +26,7 @@ from pydantic import BaseModel, Field
 
 from .data import IMAGE_SUFFIXES
 from .database import Database
+from .suggestions import training_plans
 
 ROOT = Path(__file__).resolve().parents[1]
 JOBS_DIR = ROOT / ".jobs"
@@ -152,10 +153,7 @@ async def training_suggestion(dataset_id: str) -> dict[str, Any]:
     count = len(images)
     captioned = sum(bool(image["caption"].strip()) for image in images)
     median_short_side = int(median([min(width, height) for width, height in dimensions])) if dimensions else 1024
-    # This focused trainer uses bf16 LoRA without base-weight quantization;
-    # 768 is the safe default on 32 GB cards, 1024 is offered manually.
-    resolution = 768
-    steps = max(800, min(3000, max(count, 1) * 100))
+    plans = training_plans(count, median_short_side)
     captions = [image["caption"].strip() for image in images if image["caption"].strip()]
     # Pick the caption whose vocabulary overlaps most with the others. It makes
     # a representative validation prompt without using extra API quota.
@@ -165,7 +163,7 @@ async def training_suggestion(dataset_id: str) -> dict[str, Any]:
         sample_prompt = captions[scores.index(max(scores))]
     else:
         sample_prompt = "A high quality representative image from this training dataset"
-    return {"dataset_id": dataset["id"], "image_count": count, "captioned_count": captioned, "caption_coverage": round(captioned / count, 3) if count else 0, "median_short_side": median_short_side, "recommended": {"resolution": resolution, "rank": 16, "steps": steps, "batch_size": 1, "gradient_accumulation": 1}, "sample_prompt": sample_prompt, "sample_prompt_reason": "Chosen from the caption most representative of this dataset." if captions else "Add captions to generate a dataset-specific test prompt.", "reason": f"{count} images, {captioned}/{count} captioned, median short side {median_short_side}px."}
+    return {"dataset_id": dataset["id"], "image_count": count, "captioned_count": captioned, "caption_coverage": round(captioned / count, 3) if count else 0, "median_short_side": median_short_side, **plans, "sample_prompt": sample_prompt, "sample_prompt_reason": "Chosen from the caption most representative of this dataset." if captions else "Add captions to generate a dataset-specific test prompt.", "reason": f"{count} images, {captioned}/{count} captioned, median short side {median_short_side}px."}
 
 
 @app.get("/api/datasets/{dataset_id}")

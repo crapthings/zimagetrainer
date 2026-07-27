@@ -80,12 +80,16 @@ type TrainingParams = {
   sampleEvery?: number;
   validationSamples?: ValidationSample[];
 };
+type SuggestedTrainingParams = TrainingParams & {
+  exposures_per_image: number;
+};
 type Suggestion = {
   image_count: number;
   captioned_count: number;
   caption_coverage: number;
   median_short_side: number;
-  recommended: TrainingParams;
+  recommended: SuggestedTrainingParams;
+  quick: SuggestedTrainingParams;
   sample_prompt?: string;
   sample_prompt_reason?: string;
   reason: string;
@@ -550,7 +554,7 @@ function TrainingPlan({
   onQueue: (params: TrainingParams) => void;
   queuing: boolean;
 }) {
-  const [preset, setPreset] = useState<"recommended" | "test" | "quality">(
+  const [preset, setPreset] = useState<"recommended" | "quick" | "custom">(
     "recommended",
   );
   const [panelTab, setPanelTab] = useState<"training" | "validation">(
@@ -586,28 +590,35 @@ function TrainingPlan({
               ],
       }));
   }, [suggestion?.reason]);
-  const applyPreset = (next: "recommended" | "test" | "quality") => {
+  const applyPreset = (next: "recommended" | "quick") => {
     setPreset(next);
-    if (next === "recommended" && suggestion)
-      setParams((current) => ({ ...current, ...suggestion.recommended }));
-    if (next === "test")
+    const plan =
+      next === "recommended" ? suggestion?.recommended : suggestion?.quick;
+    if (plan)
       setParams((current) => ({
         ...current,
-        resolution: 768,
-        rank: 8,
-        steps: 500,
-      }));
-    if (next === "quality")
-      setParams((current) => ({
-        ...current,
-        resolution: 1024,
-        rank: 32,
-        steps: Math.max(1600, suggestion?.recommended.steps ?? 1600),
+        resolution: plan.resolution,
+        rank: plan.rank,
+        steps: plan.steps,
+        saveEvery: Math.min(current.saveEvery ?? 250, plan.steps),
       }));
   };
   const ready = imageCount > 0 && captionedCount === imageCount;
   const recommended = suggestion?.recommended ?? params;
-  const qualitySteps = Math.max(1600, suggestion?.recommended.steps ?? 1600);
+  const recommendedExposures =
+    suggestion?.recommended.exposures_per_image ??
+    (imageCount ? Math.round((params.steps / imageCount) * 10) / 10 : 0);
+  const quick = suggestion?.quick ?? {
+    ...params,
+    rank: 8,
+    steps: 50,
+    exposures_per_image: imageCount
+      ? Math.round((50 / imageCount) * 10) / 10
+      : 0,
+  };
+  const exposuresPerImage = imageCount
+    ? Math.round((params.steps / imageCount) * 10) / 10
+    : 0;
   const saveEvery = Math.max(1, params.saveEvery ?? 250);
   const keepLast = Math.max(1, params.keepLast ?? 3);
   const checkpointCount = Math.ceil(params.steps / saveEvery);
@@ -628,7 +639,7 @@ function TrainingPlan({
         sampleIndex === index ? { ...sample, ...changes } : sample,
       ),
     });
-  const selected = (name: "recommended" | "test" | "quality") =>
+  const selected = (name: "recommended" | "quick") =>
     `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
     <section className="training-panel">
@@ -659,7 +670,7 @@ function TrainingPlan({
 
       {panelTab === "training" ? (
         <>
-          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button
               className={selected("recommended")}
               onClick={() => applyPreset("recommended")}
@@ -671,27 +682,22 @@ function TrainingPlan({
                 {recommended.resolution}px · R{recommended.rank} ·{" "}
                 {recommended.steps} steps
               </span>
-            </button>
-            <button
-              className={selected("test")}
-              onClick={() => applyPreset("test")}
-            >
-              <span className="block text-xs font-semibold text-olive-800">
-                Fast test
-              </span>
-              <span className="mt-1 block text-[10px] text-olive-500">
-                768px · R8 · 500 steps
+              <span className="mt-1 block text-[9px] text-olive-500">
+                ≈ {recommendedExposures}× per image
               </span>
             </button>
             <button
-              className={selected("quality")}
-              onClick={() => applyPreset("quality")}
+              className={selected("quick")}
+              onClick={() => applyPreset("quick")}
             >
               <span className="block text-xs font-semibold text-olive-800">
-                Higher detail
+                Setup check
               </span>
               <span className="mt-1 block text-[10px] text-olive-500">
-                1024px · R32 · {qualitySteps} steps
+                {quick.resolution}px · R{quick.rank} · {quick.steps} steps
+              </span>
+              <span className="mt-1 block text-[9px] text-olive-500">
+                ≈ {quick.exposures_per_image}× per image
               </span>
             </button>
           </div>
@@ -705,9 +711,10 @@ function TrainingPlan({
                     className="training-input"
                     type="number"
                     value={params.resolution}
-                    onChange={(e) =>
-                      setParams({ ...params, resolution: +e.target.value })
-                    }
+                    onChange={(e) => {
+                      setPreset("custom");
+                      setParams({ ...params, resolution: +e.target.value });
+                    }}
                   />
                 </label>
                 <label>
@@ -716,9 +723,10 @@ function TrainingPlan({
                     className="training-input"
                     type="number"
                     value={params.rank}
-                    onChange={(e) =>
-                      setParams({ ...params, rank: +e.target.value })
-                    }
+                    onChange={(e) => {
+                      setPreset("custom");
+                      setParams({ ...params, rank: +e.target.value });
+                    }}
                   />
                 </label>
                 <label>
@@ -727,12 +735,17 @@ function TrainingPlan({
                     className="training-input"
                     type="number"
                     value={params.steps}
-                    onChange={(e) =>
-                      setParams({ ...params, steps: +e.target.value })
-                    }
+                    onChange={(e) => {
+                      setPreset("custom");
+                      setParams({ ...params, steps: +e.target.value });
+                    }}
                   />
                 </label>
               </div>
+              <p className="mt-2 text-[10px] leading-relaxed text-olive-500">
+                ≈ {exposuresPerImage} presentations per image at batch size 1.
+                Compare validation checkpoints; more is not always better.
+              </p>
             </section>
 
             <div className="training-form-divider" role="separator" />
