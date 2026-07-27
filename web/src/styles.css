@@ -42,7 +42,7 @@
     .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1) > h3 + p { display:none; }
     .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1) > button { margin-top:10px; }
     .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(2) > h3 + p { margin-top:3px; }
-    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(4) { position:absolute; top:126px; right:28px; width:var(--training-aside); min-height:calc(100vh - 150px); }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(4) { position:fixed; top:24px; right:24px; bottom:24px; z-index:20; width:var(--training-aside); min-height:0; overflow-y:auto; }
     .app-content:has(> a:first-child + header) > section.mt-4.grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
     .app-content:has(> a:first-child + header) > section.mt-4.grid > div > button > p { display:none !important; }
   }
