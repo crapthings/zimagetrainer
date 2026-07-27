@@ -1,0 +1,11 @@
+{
+  "name": "zimage-trainer",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names api,web --prefix-colors cyan,magenta \"uv run python server.py\" \"corepack pnpm --dir web dev\"",
+    "build": "corepack pnpm --dir web build"
+  },
+  "devDependencies": {
+    "concurrently": "latest"
+  }
+}

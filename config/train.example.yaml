@@ -1,0 +1,19 @@
+# Each image may have a same-named .txt caption.
+data:
+  folder: data/train
+  resolution: 1024
+  aspect_ratio_bucketing: true
+lora:
+  rank: 16
+  alpha: 16
+train:
+  output_dir: outputs/my_zimage_lora
+  steps: 1000
+  batch_size: 1
+  gradient_accumulation: 1
+  learning_rate: 0.0001
+  save_every: 250
+  log_every: 1
+  seed: 42
+  gradient_checkpointing: true
+  offload_aux_models: true
