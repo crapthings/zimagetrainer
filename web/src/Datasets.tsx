@@ -173,24 +173,24 @@ function CaptionActions({
               Re-caption all images
             </button>
 
-            <details className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
-              <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+            <details className="mt-1 rounded-lg border border-olive-200 bg-olive-50 p-2">
+              <summary className="cursor-pointer text-xs font-semibold text-olive-700">
                 System prompt
               </summary>
               <textarea
-                className="mt-2 min-h-28 w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-cyan-500"
+                className="mt-2 min-h-28 w-full rounded-md border border-olive-200 bg-white p-2 text-xs text-olive-800 outline-none focus:border-olive-500"
                 value={prompt}
                 onChange={(event) => onPrompt(event.target.value)}
               />
               <div className="mt-2 flex items-center justify-between gap-2">
                 <button
-                  className="text-xs font-semibold text-cyan-700 hover:underline"
+                  className="text-xs font-semibold text-olive-700 hover:underline"
                   onClick={() => onPrompt(DEFAULT_CAPTION_PROMPT)}
                 >
                   Restore default
                 </button>
                 <button
-                  className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                  className="rounded-md bg-olive-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                   disabled={saving}
                   onClick={onSave}
                 >
@@ -254,16 +254,16 @@ function ConfirmAction({
           <div
             ref={refs.setFloating}
             style={floatingStyles}
-            className="z-50 w-64 rounded-lg border border-slate-200 bg-white p-3 shadow-xl"
+            className="z-50 w-64 rounded-lg border border-olive-200 bg-white p-3 shadow-xl"
             {...getFloatingProps()}
           >
-            <h3 className="text-xs font-bold text-slate-900">{title}</h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            <h3 className="text-xs font-bold text-olive-900">{title}</h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-olive-500">
               {detail}
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <button
-                className="rounded-md px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                className="rounded-md px-2 py-1.5 text-xs text-olive-600 hover:bg-olive-100"
                 onClick={() => setOpen(false)}
               >
                 Cancel
@@ -364,16 +364,16 @@ function DatasetActions({
             className="dataset-delete-confirm"
             {...confirmInteractions.getFloatingProps()}
           >
-            <h3 className="text-xs font-bold text-slate-900">
+            <h3 className="text-xs font-bold text-olive-900">
               Delete this dataset?
             </h3>
-            <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+            <p className="mt-1 text-[11px] leading-relaxed text-olive-500">
               All images, captions, and metadata in this dataset will be
               permanently deleted.
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <button
-                className="rounded-md px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                className="rounded-md px-2 py-1.5 text-xs text-olive-600 hover:bg-olive-100"
                 onClick={() => setConfirmOpen(false)}
               >
                 Cancel
@@ -453,13 +453,13 @@ function TrainingPlan({
   };
   const ready = imageCount > 0 && captionedCount === imageCount;
   const selected = (name: "recommended" | "test" | "quality") =>
-    `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-violet-400 bg-violet-50 ring-1 ring-violet-200" : "border-slate-200 bg-white hover:border-slate-300"}`;
+    `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
     <section className="training-panel">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Training</h3>
-          <p className="mt-1 text-[11px] text-slate-500">
+          <p className="mt-1 text-[11px] text-olive-500">
             {datasetName} · {imageCount} images · {captionedCount}/{imageCount}{" "}
             captioned
           </p>
@@ -470,7 +470,7 @@ function TrainingPlan({
           {ready ? "Ready to train" : "Complete captions first"}
         </span>
       </div>
-      <p className="mt-3 text-xs text-slate-600">
+      <p className="mt-3 text-xs text-olive-600">
         {suggestion?.reason ?? "Loading a recommendation from your dataset…"}
       </p>
       <div className="mt-3 grid gap-2 sm:grid-cols-3">
@@ -478,10 +478,10 @@ function TrainingPlan({
           className={selected("recommended")}
           onClick={() => applyPreset("recommended")}
         >
-          <span className="block text-xs font-semibold text-slate-800">
+          <span className="block text-xs font-semibold text-olive-800">
             Recommended
           </span>
-          <span className="mt-1 block text-[10px] text-slate-500">
+          <span className="mt-1 block text-[10px] text-olive-500">
             Balanced for this dataset
           </span>
         </button>
@@ -489,10 +489,10 @@ function TrainingPlan({
           className={selected("test")}
           onClick={() => applyPreset("test")}
         >
-          <span className="block text-xs font-semibold text-slate-800">
+          <span className="block text-xs font-semibold text-olive-800">
             Fast test
           </span>
-          <span className="mt-1 block text-[10px] text-slate-500">
+          <span className="mt-1 block text-[10px] text-olive-500">
             Short run to validate setup
           </span>
         </button>
@@ -500,23 +500,23 @@ function TrainingPlan({
           className={selected("quality")}
           onClick={() => applyPreset("quality")}
         >
-          <span className="block text-xs font-semibold text-slate-800">
+          <span className="block text-xs font-semibold text-olive-800">
             Higher detail
           </span>
-          <span className="mt-1 block text-[10px] text-slate-500">
+          <span className="mt-1 block text-[10px] text-olive-500">
             More capacity and steps
           </span>
         </button>
       </div>
-      <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2">
-        <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+      <details className="mt-3 rounded-md border border-olive-200 bg-olive-50 p-2">
+        <summary className="cursor-pointer text-xs font-semibold text-olive-700">
           Advanced options
         </summary>
         <div className="mt-2 grid grid-cols-3 gap-2">
           <label>
             Resolution
             <input
-              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
               type="number"
               value={params.resolution}
               onChange={(e) =>
@@ -527,7 +527,7 @@ function TrainingPlan({
           <label>
             Rank
             <input
-              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
               type="number"
               value={params.rank}
               onChange={(e) => setParams({ ...params, rank: +e.target.value })}
@@ -536,14 +536,14 @@ function TrainingPlan({
           <label>
             Steps
             <input
-              className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
               type="number"
               value={params.steps}
               onChange={(e) => setParams({ ...params, steps: +e.target.value })}
             />
           </label>
         </div>
-        <label className="mt-3 flex items-center gap-2 !m-0 text-xs font-semibold text-slate-700">
+        <label className="mt-3 flex items-center gap-2 !m-0 text-xs font-semibold text-olive-700">
           <input
             type="checkbox"
             checked={!!params.sampleEnabled}
@@ -558,7 +558,7 @@ function TrainingPlan({
             <label>
               Every N steps
               <input
-                className="mt-1 w-full rounded-md border border-slate-200 bg-white px-2 py-1 text-xs"
+                className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
                 type="number"
                 min="1"
                 value={params.sampleEvery}
@@ -570,27 +570,27 @@ function TrainingPlan({
             <label>
               Test prompt
               <textarea
-                className="mt-1 min-h-20 w-full rounded-md border border-slate-200 bg-white p-2 text-xs"
+                className="mt-1 min-h-20 w-full rounded-md border border-olive-200 bg-white p-2 text-xs"
                 value={params.samplePrompt}
                 onChange={(e) =>
                   setParams({ ...params, samplePrompt: e.target.value })
                 }
               />
             </label>
-            <p className="mt-1 text-[10px] text-slate-500">
+            <p className="mt-1 text-[10px] text-olive-500">
               {suggestion?.sample_prompt_reason}
             </p>
           </>
         )}
       </details>
       <button
-        className="mt-3 w-full rounded-md bg-violet-600 px-3 py-2 text-xs font-semibold text-white hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-40"
+        className="mt-3 w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
         disabled={!ready || queuing}
         onClick={() => onQueue(params)}
       >
         {queuing ? "Adding training run…" : "Start training"}
       </button>
-      <p className="mt-2 text-[10px] text-slate-500">
+      <p className="mt-2 text-[10px] text-olive-500">
         Every start creates a separate run and output directory.
       </p>
       {!ready && (
@@ -634,19 +634,19 @@ export function DatasetList() {
     <>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-2xl font-semibold tracking-tight">Datasets</h2>
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-olive-500">
           Create and manage training data
         </span>
       </header>
       <section className="panel mt-4 flex flex-col gap-2 sm:flex-row">
         <input
-          className="min-w-0 flex-1 rounded-md border border-slate-200 px-2 py-1.5 text-xs"
+          className="min-w-0 flex-1 rounded-md border border-olive-200 px-2 py-1.5 text-xs"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Dataset name, for example: studio-portraits"
         />
         <button
-          className="w-full shrink-0 whitespace-nowrap rounded-md bg-cyan-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto"
+          className="w-full shrink-0 whitespace-nowrap rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto"
           disabled={!name.trim() || create.isPending}
           onClick={() => create.mutate()}
         >
@@ -659,7 +659,7 @@ export function DatasetList() {
       >
         <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
           {isLoading ? (
-            <p className="p-3 text-xs text-slate-500">Loading datasets…</p>
+            <p className="p-3 text-xs text-olive-500">Loading datasets…</p>
           ) : (
             virtual.getVirtualItems().map((row) => {
               const d = datasets[row.index];
@@ -667,10 +667,10 @@ export function DatasetList() {
                 <Link
                   key={d.id}
                   to={`/datasets/${d.id}`}
-                  className="absolute left-0 top-0 flex h-[72px] w-full items-center gap-3 border-b border-slate-100 px-3 hover:bg-slate-50"
+                  className="absolute left-0 top-0 flex h-[72px] w-full items-center gap-3 border-b border-olive-100 px-3 hover:bg-olive-50"
                   style={{ transform: `translateY(${row.start}px)` }}
                 >
-                  <div className="h-10 w-10 overflow-hidden rounded-md bg-slate-100">
+                  <div className="h-10 w-10 overflow-hidden rounded-md bg-olive-100">
                     {d.cover_path && (
                       <img
                         className="h-full w-full object-cover"
@@ -680,12 +680,12 @@ export function DatasetList() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="truncate text-sm font-semibold">{d.name}</h3>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
+                    <p className="mt-0.5 text-[11px] text-olive-500">
                       {d.image_count} images ·{" "}
                       {new Date(`${d.created_at}Z`).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="text-slate-400">›</span>
+                  <span className="text-olive-400">›</span>
                 </Link>
               );
             })
@@ -862,7 +862,7 @@ export function DatasetDetail() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedIndex, data]);
   if (isLoading || !data)
-    return <p className="text-xs text-slate-500">Loading dataset…</p>;
+    return <p className="text-xs text-olive-500">Loading dataset…</p>;
   const captionState = store.captioning,
     inProgress =
       captionState.status === "started" || captionState.status === "progress";
@@ -884,11 +884,11 @@ export function DatasetDetail() {
             <div className="flex min-w-0 items-baseline gap-2">
               <Link
                 to="/datasets"
-                className="shrink-0 text-xs font-semibold text-cyan-700 hover:underline"
+                className="shrink-0 text-xs font-semibold text-olive-700 hover:underline"
               >
                 Datasets
               </Link>
-              <span className="text-xs text-slate-300">/</span>
+              <span className="text-xs text-olive-300">/</span>
               <h2 className="truncate text-2xl font-semibold tracking-tight">
                 {data.dataset.name}
               </h2>
@@ -961,7 +961,7 @@ export function DatasetDetail() {
           </div>
         </section>
         {(inProgress || captionState.status === "error") && (
-          <section className="mt-3 rounded-md border border-cyan-200 bg-cyan-50 p-3 text-xs text-cyan-900">
+          <section className="mt-3 rounded-md border border-olive-200 bg-olive-50 p-3 text-xs text-olive-900">
             <div className="flex justify-between font-semibold">
               <span>
                 {captionState.status === "error"
@@ -973,7 +973,7 @@ export function DatasetDetail() {
               </span>
             </div>
             {captionState.path && (
-              <p className="mt-1 truncate text-[11px] text-cyan-700">
+              <p className="mt-1 truncate text-[11px] text-olive-700">
                 {captionState.path}
               </p>
             )}
@@ -986,7 +986,7 @@ export function DatasetDetail() {
         )}
         {(enqueueTraining.isSuccess || selectedIds.size > 0) && (
           <section className="actionbar mt-4">
-            <div className="text-xs text-slate-500">
+            <div className="text-xs text-olive-500">
               {enqueueTraining.isSuccess
                 ? "Training added to queue"
                 : `${selectedIds.size} images selected`}
@@ -1010,7 +1010,7 @@ export function DatasetDetail() {
           {data.images.map((image, index) => (
             <div
               key={image.id}
-              className={`dataset-image-card ${selectedIds.has(image.id) ? "border-cyan-500 ring-2 ring-cyan-200" : "border-slate-200"}`}
+              className={`dataset-image-card ${selectedIds.has(image.id) ? "border-olive-500 ring-2 ring-olive-200" : "border-olive-200"}`}
             >
               <button
                 className="block w-full text-left"
@@ -1049,26 +1049,26 @@ export function DatasetDetail() {
 
       {selected && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-200/80 p-6"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-olive-200/80 p-6"
           onClick={() => setSelectedIndex(null)}
         >
           <div
             className="relative grid max-h-full w-full max-w-6xl grid-cols-[minmax(0,1fr)_300px] overflow-hidden rounded-lg bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex min-w-0 flex-col bg-slate-100 p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-slate-600">
+            <div className="flex min-w-0 flex-col bg-olive-100 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-olive-600">
                 <span>
                   {selectedIndex! + 1} / {data.images.length}
                 </span>
                 <button
-                  className="font-semibold hover:text-slate-950"
+                  className="font-semibold hover:text-olive-950"
                   onClick={() => setSelectedIndex(null)}
                 >
                   Close · Esc
                 </button>
               </div>
-              <div className="relative aspect-video w-full overflow-hidden rounded-md bg-slate-200">
+              <div className="relative aspect-video w-full overflow-hidden rounded-md bg-olive-200">
                 <img
                   className="absolute inset-0 h-full w-full object-contain"
                   src={`${API}/files/${selected.path}`}
@@ -1076,7 +1076,7 @@ export function DatasetDetail() {
               </div>
               <div className="mt-2 flex justify-between">
                 <button
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-olive-200 bg-white px-3 py-1.5 text-xs text-olive-700 hover:bg-olive-50"
                   onClick={() =>
                     setSelectedIndex(
                       (selectedIndex! - 1 + data.images.length) %
@@ -1087,7 +1087,7 @@ export function DatasetDetail() {
                   ← Previous
                 </button>
                 <button
-                  className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50"
+                  className="rounded-md border border-olive-200 bg-white px-3 py-1.5 text-xs text-olive-700 hover:bg-olive-50"
                   onClick={() =>
                     setSelectedIndex((selectedIndex! + 1) % data.images.length)
                   }
@@ -1098,16 +1098,16 @@ export function DatasetDetail() {
             </div>
             <aside className="flex min-h-0 flex-col p-3">
               <h3 className="text-sm font-bold">Caption</h3>
-              <p className="mt-1 text-[10px] text-slate-500">
+              <p className="mt-1 text-[10px] text-olive-500">
                 Edit and save the sidecar .txt caption.
               </p>
               <textarea
-                className="mt-3 min-h-0 flex-1 resize-none rounded-md border border-slate-200 p-2 text-xs outline-none focus:border-cyan-500"
+                className="mt-3 min-h-0 flex-1 resize-none rounded-md border border-olive-200 p-2 text-xs outline-none focus:border-olive-500"
                 value={captionText}
                 onChange={(e) => setCaptionText(e.target.value)}
               />
               <button
-                className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                className="mt-3 rounded-md bg-olive-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                 disabled={saveCaption.isPending}
                 onClick={() => saveCaption.mutate()}
               >

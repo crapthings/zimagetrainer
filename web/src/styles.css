@@ -3,11 +3,23 @@
 @layer base {
   :root {
     color-scheme: light;
+    --app-canvas: var(--color-olive-50);
+    --app-surface: color-mix(
+      in oklab,
+      var(--color-white) 94%,
+      var(--color-olive-100)
+    );
+    --app-border: var(--color-olive-200);
+    --app-text: var(--color-olive-950);
+    --app-muted: var(--color-olive-600);
+    --app-primary: var(--color-olive-700);
+    --app-primary-hover: var(--color-olive-800);
+    --app-primary-soft: var(--color-olive-100);
   }
   body {
     margin: 0;
     min-width: 320px;
-    background: #eef2f7;
+    background: var(--app-canvas);
     font-family:
       Inter,
       ui-sans-serif,
@@ -28,10 +40,17 @@
     margin-top: 9px;
     font-size: 11px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--app-muted);
   }
   label input {
     margin-top: 4px;
+  }
+  input[type="checkbox"] {
+    accent-color: var(--app-primary);
+  }
+  ::selection {
+    background: var(--color-olive-300);
+    color: var(--color-olive-950);
   }
   h2 {
     font-size: 13px;
@@ -48,8 +67,8 @@
     display: grid;
     min-height: 100vh;
     grid-template-columns: 240px minmax(0, 1fr);
-    background: #f6f8fb;
-    color: #0f172a;
+    background: var(--app-canvas);
+    color: var(--app-text);
   }
   .app-sidebar {
     position: sticky;
@@ -59,14 +78,14 @@
     flex-direction: column;
     overflow: auto;
     padding: 18px 16px 16px;
-    background: #111827;
-    box-shadow: inset -1px 0 rgba(148, 163, 184, 0.14);
+    border-right: 1px solid var(--app-border);
+    background: var(--color-olive-100);
   }
   .app-brand {
     display: flex;
     align-items: center;
     gap: 9px;
-    color: #f8fafc;
+    color: var(--color-olive-950);
     font-size: 14px;
     font-weight: 700;
   }
@@ -76,8 +95,8 @@
     height: 26px;
     place-items: center;
     border-radius: 7px;
-    background: #e2e8f0;
-    color: #111827;
+    background: var(--color-olive-800);
+    color: var(--color-olive-50);
     font-size: 12px;
     font-weight: 800;
   }
@@ -87,7 +106,7 @@
     gap: 10px;
     border-radius: 11px;
     padding: 10px 11px;
-    color: #a7b4c8;
+    color: var(--color-olive-600);
     font-size: 13px;
     font-weight: 600;
     transition:
@@ -99,39 +118,44 @@
     width: 6px;
     height: 6px;
     border-radius: 999px;
-    background: #526176;
+    background: var(--color-olive-400);
     content: "";
     transition:
       background 0.16s ease,
       box-shadow 0.16s ease;
   }
   .app-nav-link:hover {
-    background: rgba(148, 163, 184, 0.1);
-    color: #f8fafc;
+    background: var(--color-olive-200);
+    color: var(--color-olive-900);
   }
   .app-nav-link-active {
-    background: linear-gradient(
-      90deg,
-      rgba(34, 211, 238, 0.18),
-      rgba(14, 165, 233, 0.08)
+    background: color-mix(
+      in oklab,
+      var(--color-olive-300) 72%,
+      var(--color-white)
     );
-    color: #ecfeff;
-    box-shadow: inset 0 0 0 1px rgba(103, 232, 249, 0.12);
+    color: var(--color-olive-950);
+    box-shadow: inset 0 0 0 1px var(--color-olive-300);
   }
   .app-nav-link-active::before {
-    background: #67e8f9;
-    box-shadow: 0 0 0 4px rgba(103, 232, 249, 0.13);
+    background: var(--color-olive-700);
+    box-shadow: 0 0 0 4px
+      color-mix(in oklab, var(--color-olive-500) 18%, transparent);
   }
   .app-sidebar-footer {
     margin-top: auto;
     display: flex;
     align-items: center;
     gap: 7px;
-    border: 1px solid rgba(110, 231, 183, 0.18);
+    border: 1px solid var(--color-olive-300);
     border-radius: 10px;
-    background: rgba(16, 185, 129, 0.08);
+    background: color-mix(
+      in oklab,
+      var(--color-olive-200) 70%,
+      var(--color-white)
+    );
     padding: 9px 10px;
-    color: #a7f3d0;
+    color: var(--color-olive-700);
     font-size: 11px;
     font-weight: 600;
   }
@@ -140,8 +164,9 @@
     width: 7px;
     height: 7px;
     border-radius: 999px;
-    background: #34d399;
-    box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.14);
+    background: var(--color-olive-600);
+    box-shadow: 0 0 0 3px
+      color-mix(in oklab, var(--color-olive-500) 18%, transparent);
   }
   .app-body {
     min-width: 0;
@@ -173,11 +198,11 @@
   }
   .dataset-header-stats {
     margin-top: 4px;
-    color: #64748b;
+    color: var(--app-muted);
     font-size: 11px;
   }
   .dataset-header-stats strong {
-    color: #334155;
+    color: var(--color-olive-800);
     font-weight: 750;
   }
   .dataset-menu-trigger {
@@ -185,10 +210,10 @@
     width: 30px;
     height: 30px;
     place-items: center;
-    border: 1px solid #dbe2ea;
+    border: 1px solid var(--app-border);
     border-radius: 9px;
-    background: #fff;
-    color: #64748b;
+    background: var(--app-surface);
+    color: var(--app-muted);
     font-size: 11px;
     font-weight: 800;
     letter-spacing: 1px;
@@ -198,16 +223,16 @@
       color 0.16s ease;
   }
   .dataset-menu-trigger:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
-    color: #0f172a;
+    border-color: var(--color-olive-300);
+    background: var(--color-olive-100);
+    color: var(--app-text);
   }
   .dataset-menu {
     z-index: 70;
     min-width: 180px;
-    border: 1px solid #dbe2ea;
+    border: 1px solid var(--app-border);
     border-radius: 11px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 5px;
     box-shadow: 0 14px 34px rgba(15, 23, 42, 0.14);
   }
@@ -229,7 +254,7 @@
     width: 280px;
     border: 1px solid #fecaca;
     border-radius: 12px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 14px;
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.18);
   }
@@ -241,9 +266,9 @@
     justify-content: space-between;
     gap: 12px;
     margin-top: 16px;
-    border: 1px solid rgba(203, 213, 225, 0.9);
+    border: 1px solid var(--app-border);
     border-radius: 13px;
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--app-surface);
     padding: 8px 10px;
     box-shadow:
       0 6px 20px rgba(15, 23, 42, 0.045),
@@ -260,11 +285,11 @@
     height: 34px;
     place-items: center;
     border-radius: 8px;
-    background: #0891b2;
-    color: #fff;
+    background: var(--app-primary);
+    color: var(--color-white);
   }
   .dataset-upload-button:hover {
-    background: #0e7490;
+    background: var(--app-primary-hover);
   }
   .dataset-caption-tools {
     display: flex;
@@ -276,14 +301,14 @@
     display: flex;
     flex-shrink: 0;
     overflow: hidden;
-    border: 1px solid #a5f3fc;
+    border: 1px solid var(--color-olive-300);
     border-radius: 9px;
-    background: #ecfeff;
+    background: var(--color-olive-100);
   }
   .caption-combo-main {
     min-width: 112px;
     padding: 7px 11px;
-    color: #0e7490;
+    color: var(--color-olive-800);
     font-size: 12px;
     font-weight: 700;
   }
@@ -294,13 +319,13 @@
     justify-content: center;
     padding: 0;
     line-height: 0;
-    border-left: 1px solid #a5f3fc;
-    color: #0e7490;
+    border-left: 1px solid var(--color-olive-300);
+    color: var(--color-olive-800);
     font-size: 13px;
   }
   .caption-combo-main:hover,
   .caption-combo-toggle:hover {
-    background: #cffafe;
+    background: var(--color-olive-200);
   }
   .caption-combo-main:disabled,
   .caption-combo-toggle:disabled {
@@ -310,14 +335,14 @@
   .caption-options {
     z-index: 75;
     width: min(360px, calc(100vw - 24px));
-    border: 1px solid #dbe2ea;
+    border: 1px solid var(--app-border);
     border-radius: 13px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 10px;
     box-shadow: 0 18px 42px rgba(15, 23, 42, 0.17);
   }
   .caption-options-label {
-    color: #64748b;
+    color: var(--app-muted);
     font-size: 10px;
     font-weight: 750;
     letter-spacing: 0.08em;
@@ -325,11 +350,11 @@
   }
   .caption-current-model {
     margin-top: 3px;
-    color: #64748b;
+    color: var(--app-muted);
     font-size: 11px;
   }
   .caption-current-model strong {
-    color: #334155;
+    color: var(--color-olive-800);
     font-weight: 700;
   }
   .caption-key-warning {
@@ -352,34 +377,34 @@
     justify-content: space-between;
     border-radius: 7px;
     padding: 7px 8px;
-    color: #475569;
+    color: var(--color-olive-700);
     font-size: 12px;
     font-weight: 600;
     text-align: left;
   }
   .caption-model-option:hover {
-    background: #f8fafc;
+    background: var(--color-olive-100);
   }
   .caption-model-option-active {
-    background: #ecfeff;
-    color: #0e7490;
+    background: var(--color-olive-200);
+    color: var(--color-olive-900);
   }
   .caption-options-divider {
     height: 1px;
     margin: 8px 0 5px;
-    background: #e2e8f0;
+    background: var(--app-border);
   }
   .caption-recaption-action {
     width: 100%;
     border-radius: 7px;
     padding: 7px 8px;
-    color: #475569;
+    color: var(--color-olive-700);
     font-size: 12px;
     font-weight: 650;
     text-align: left;
   }
   .caption-recaption-action:hover {
-    background: #f8fafc;
+    background: var(--color-olive-100);
   }
   .dataset-gallery {
     display: grid;
@@ -392,12 +417,12 @@
     overflow: hidden;
     border-width: 1px;
     border-radius: 10px;
-    background: #fff;
+    background: var(--app-surface);
   }
   .dataset-image-caption {
     min-height: calc(2 * 1.4em + 16px);
     padding: 8px 9px;
-    color: #64748b;
+    color: var(--app-muted);
     font-size: 11px;
     line-height: 1.4;
   }
@@ -419,18 +444,18 @@
   }
   .training-panel {
     min-height: 100%;
-    border: 1px solid rgba(203, 213, 225, 0.9);
+    border: 1px solid var(--app-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.97);
+    background: var(--app-surface);
     padding: 16px;
     box-shadow:
       0 14px 34px rgba(15, 23, 42, 0.08),
       0 1px 2px rgba(15, 23, 42, 0.05);
   }
   .panel {
-    border: 1px solid rgba(203, 213, 225, 0.9);
+    border: 1px solid var(--app-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--app-surface);
     padding: 16px;
     box-shadow:
       0 10px 28px rgba(15, 23, 42, 0.055),
@@ -440,17 +465,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border: 1px solid rgba(203, 213, 225, 0.9);
+    border: 1px solid var(--app-border);
     border-radius: 16px;
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--app-surface);
     padding: 12px 14px;
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
   }
   .empty-workspace {
     max-width: 720px;
-    border: 1px solid rgba(203, 213, 225, 0.9);
+    border: 1px solid var(--app-border);
     border-radius: 16px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 22px;
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04);
   }
@@ -458,9 +483,9 @@
     margin-top: 12px;
     width: 100%;
     border-radius: 10px;
-    background: #0891b2;
+    background: var(--app-primary);
     padding: 8px 12px;
-    color: #fff;
+    color: var(--color-white);
     font-size: 12px;
     font-weight: 700;
     transition:
@@ -468,7 +493,7 @@
       transform 0.16s ease;
   }
   .primary:hover {
-    background: #0e7490;
+    background: var(--app-primary-hover);
   }
   .primary:disabled {
     cursor: not-allowed;
@@ -477,11 +502,11 @@
   .secondary {
     margin-top: 8px;
     width: 100%;
-    border: 1px solid #dbe2ea;
+    border: 1px solid var(--app-border);
     border-radius: 10px;
-    background: #fff;
+    background: var(--app-surface);
     padding: 8px 12px;
-    color: #475569;
+    color: var(--color-olive-700);
     font-size: 12px;
     font-weight: 600;
     transition:
@@ -489,12 +514,12 @@
       border-color 0.16s ease;
   }
   .secondary:hover {
-    border-color: #cbd5e1;
-    background: #f8fafc;
+    border-color: var(--color-olive-300);
+    background: var(--color-olive-100);
   }
   .muted {
     font-size: 11px;
-    color: #64748b;
+    color: var(--app-muted);
   }
 }
 

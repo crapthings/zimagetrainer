@@ -65,37 +65,37 @@ export default function ModelSelect({
       <button
         ref={refs.setReference}
         type="button"
-        className="mt-1 flex w-full items-center justify-between rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-sm text-slate-800 shadow-sm"
+        className="mt-1 flex w-full items-center justify-between rounded-lg border border-olive-200 bg-white px-3 py-2 text-left text-sm text-olive-800 shadow-sm"
         {...getReferenceProps()}
       >
         <span>{selected.name}</span>
-        <span className="text-slate-400">⌄</span>
+        <span className="text-olive-400">⌄</span>
       </button>
       {open && (
         <FloatingPortal>
           <div
             ref={refs.setFloating}
             style={floatingStyles}
-            className="z-50 w-80 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl"
+            className="z-50 w-80 overflow-hidden rounded-xl border border-olive-200 bg-white p-1 shadow-xl"
             {...getFloatingProps()}
           >
             {captionModels.map((model) => (
               <button
                 key={model.id}
                 type="button"
-                className={`w-full rounded-lg px-3 py-2 text-left transition ${model.id === value ? "bg-cyan-50" : "hover:bg-slate-50"}`}
+                className={`w-full rounded-lg px-3 py-2 text-left transition ${model.id === value ? "bg-olive-50" : "hover:bg-olive-50"}`}
                 onClick={() => {
                   onChange(model.id);
                   setOpen(false);
                 }}
               >
-                <div className="text-sm font-semibold text-slate-800">
+                <div className="text-sm font-semibold text-olive-800">
                   {model.name}
                 </div>
-                <div className="mt-0.5 text-xs text-slate-500">
+                <div className="mt-0.5 text-xs text-olive-500">
                   {model.detail}
                 </div>
-                <code className="mt-1 block text-[10px] text-cyan-700">
+                <code className="mt-1 block text-[10px] text-olive-700">
                   {model.id}
                 </code>
               </button>
