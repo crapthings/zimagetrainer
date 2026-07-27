@@ -159,7 +159,7 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
         <path
           d={path}
           fill="none"
-          stroke="#0891b2"
+          stroke="var(--color-olive-700)"
           strokeWidth="2"
           vectorEffect="non-scaling-stroke"
         />
@@ -449,6 +449,328 @@ function RunBrowser() {
   );
 }
 
+type TimelineEvent = {
+  type: "training" | "stage" | "checkpoint" | "sample";
+  status?: string;
+  stage?: string;
+  step?: number;
+  path?: string;
+  paths?: string[];
+  created_at: string;
+};
+
+const stageLabels: Record<string, string> = {
+  "preparing first training batch": "Preparing the first training batch",
+  "encoding first image": "Encoding the first image",
+  "encoding first caption": "Encoding the first caption",
+  "running first backward pass": "Running the first backward pass",
+};
+
+function eventPresentation(event: TimelineEvent) {
+  if (event.type === "stage")
+    return {
+      icon: "●",
+      tone: "active",
+      title: stageLabels[event.stage ?? ""] ?? event.stage ?? "Preparing training",
+      detail: "Setup",
+    };
+  if (event.type === "checkpoint" && event.status === "saved")
+    return {
+      icon: "✓",
+      tone: "success",
+      title: `Checkpoint saved at step ${event.step?.toLocaleString()}`,
+      detail: event.path,
+    };
+  if (event.type === "checkpoint")
+    return {
+      icon: "−",
+      tone: "muted",
+      title: "Older checkpoints removed",
+      detail: event.paths?.join(", "),
+    };
+  if (event.type === "sample" && event.status === "starting")
+    return {
+      icon: "◐",
+      tone: "active",
+      title: "Generating validation images",
+      detail: "Validation",
+    };
+  if (event.type === "sample")
+    return {
+      icon: "▣",
+      tone: "success",
+      title: "Validation image generated",
+      detail: event.path?.split("/").at(-1),
+    };
+  if (event.status === "completed")
+    return {
+      icon: "✓",
+      tone: "success",
+      title: "Training completed",
+      detail: "Run finished successfully",
+    };
+  if (event.status === "failed")
+    return {
+      icon: "!",
+      tone: "danger",
+      title: "Training stopped with an error",
+      detail: "Open raw output for details",
+    };
+  return {
+    icon: "●",
+    tone: "active",
+    title: event.status === "queued" ? "Training queued" : "Training started",
+    detail: "Run",
+  };
+}
+
+function TrainingMonitor() {
+  const s = useStore();
+  const [selectedId, setSelectedId] = useState<string>();
+  const { data = { jobs: {} } } = useQuery({
+    queryKey: ["jobs"],
+    queryFn: async () => {
+      const response = await fetch(`${API}/api/jobs`);
+      if (!response.ok) throw new Error("Could not load training runs");
+      return response.json();
+    },
+    refetchInterval: 2000,
+  });
+  const jobs = Object.entries(data.jobs) as [string, Job][];
+  const current = jobs.filter(([, job]) =>
+    ["queued", "running", "sampling"].includes(job.status),
+  );
+  const history = jobs.filter(
+    ([, job]) => !["queued", "running", "sampling"].includes(job.status),
+  );
+  const activeId = selectedId ?? current[0]?.[0] ?? history[0]?.[0];
+  const selectedJob = jobs.find(([id]) => id === activeId)?.[1];
+  const { data: monitor } = useQuery({
+    queryKey: ["monitor", activeId],
+    queryFn: async () => {
+      const response = await fetch(`${API}/api/jobs/${activeId}/monitor`);
+      if (!response.ok) throw new Error("Could not load training output");
+      return response.json();
+    },
+    enabled: !!activeId,
+    refetchInterval: 2000,
+  });
+
+  const points = monitor?.losses?.length
+    ? monitor.losses
+    : s.training.lossHistory;
+  const samples = monitor?.samples?.length
+    ? monitor.samples
+    : s.training.samplePaths;
+  const latest = points.at(-1);
+  const status = monitor?.status ?? selectedJob?.status ?? s.training.status;
+  const stage = monitor?.stage ?? s.training.stage;
+  const step = latest?.step ?? s.training.step;
+  const loss = latest?.loss ?? s.training.loss;
+  const total = monitor?.total ?? s.training.total;
+  const progress = Math.min(
+    100,
+    Math.round((100 * step) / Math.max(1, total)),
+  );
+  const previousLoss =
+    points.length > 10 ? points[Math.max(0, points.length - 11)]?.loss : undefined;
+  const lossTrend =
+    loss === undefined || previousLoss === undefined
+      ? "Waiting"
+      : loss < previousLoss
+        ? "Falling"
+        : loss > previousLoss
+          ? "Rising"
+          : "Stable";
+  const timeline = (monitor?.timeline ?? []) as TimelineEvent[];
+  const logLines = monitor?.logs?.length ? monitor.logs : s.training.logs;
+
+  return (
+    <>
+      <header className="training-header">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">Training</h2>
+          <span className="text-xs text-olive-500">Monitor runs and outputs</span>
+        </div>
+        <div className="training-header-actions">
+          {jobs.length > 0 && (
+            <select
+              className="training-run-select"
+              value={activeId}
+              onChange={(event) => setSelectedId(event.target.value)}
+              aria-label="Select training run"
+            >
+              {[...current, ...history].map(([id, job]) => (
+                <option key={id} value={id}>
+                  {job.status} · {new Date(`${job.created_at}Z`).toLocaleString()}
+                </option>
+              ))}
+            </select>
+          )}
+          <Link className="training-datasets-link" to="/datasets">
+            Datasets
+          </Link>
+        </div>
+      </header>
+
+      {!activeId ? (
+        <div className="training-empty">
+          No training runs yet. Start one from a dataset when it is ready.
+          <Link to="/datasets">Open datasets</Link>
+        </div>
+      ) : (
+        <div className="training-monitor">
+          <section className="training-statusbar">
+            <div className="training-run-status">
+              <span className={`run-status-dot run-status-${status}`} />
+              <strong className="capitalize">{status}</strong>
+              <code>{activeId}</code>
+            </div>
+            <span>
+              {["running", "sampling"].includes(status) && stage
+                ? stageLabels[stage] ?? stage
+                : selectedJob?.error ?? "Run output is up to date"}
+            </span>
+          </section>
+
+          <section className="training-metrics">
+            <div className="training-progress-metric">
+              <div>
+                <span>Progress</span>
+                <strong>{progress}%</strong>
+              </div>
+              <div className="training-progress-track">
+                <i style={{ width: `${progress}%` }} />
+              </div>
+            </div>
+            <div>
+              <span>Step</span>
+              <strong>
+                {step.toLocaleString()}
+                <small> / {total.toLocaleString()}</small>
+              </strong>
+            </div>
+            <div>
+              <span>Current loss</span>
+              <strong>{loss?.toFixed(5) ?? "—"}</strong>
+            </div>
+            <div>
+              <span>Recent trend</span>
+              <strong className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}>
+                {lossTrend}
+              </strong>
+            </div>
+          </section>
+
+          <section className="training-chart">
+            <div className="training-section-heading">
+              <div>
+                <h3>Training loss</h3>
+                <p>Latest 300 recorded steps</p>
+              </div>
+              {latest && (
+                <span>
+                  Step {latest.step.toLocaleString()} · {latest.loss.toFixed(5)}
+                </span>
+              )}
+            </div>
+            <LossChart points={points} />
+          </section>
+
+          <div className="training-insights">
+            <section className="training-events">
+              <div className="training-section-heading">
+                <div>
+                  <h3>Important events</h3>
+                  <p>Readable milestones from the training process</p>
+                </div>
+              </div>
+              {timeline.length ? (
+                <ol className="training-event-list">
+                  {timeline
+                    .filter(
+                      (event, index, all) =>
+                        event.type !== "stage" ||
+                        !all.slice(index + 1).some(
+                          (candidate: TimelineEvent) =>
+                            candidate.type === "stage" &&
+                            candidate.stage === event.stage,
+                        ),
+                    )
+                    .slice(-12)
+                    .reverse()
+                    .map((event, index) => {
+                      const item = eventPresentation(event);
+                      return (
+                        <li key={`${event.created_at}-${index}`}>
+                          <span className={`event-icon event-icon-${item.tone}`}>
+                            {item.icon}
+                          </span>
+                          <div>
+                            <strong>{item.title}</strong>
+                            {item.detail && <p>{item.detail}</p>}
+                          </div>
+                          <time>
+                            {new Date(`${event.created_at}Z`).toLocaleTimeString(
+                              [],
+                              { hour: "2-digit", minute: "2-digit" },
+                            )}
+                          </time>
+                        </li>
+                      );
+                    })}
+                </ol>
+              ) : (
+                <p className="training-section-empty">
+                  Events will appear as the run prepares, saves checkpoints, and
+                  generates validation images.
+                </p>
+              )}
+            </section>
+
+            <section className="training-validation">
+              <div className="training-section-heading">
+                <div>
+                  <h3>Validation images</h3>
+                  <p>Compare generated samples across checkpoints</p>
+                </div>
+                <span>{samples.length}</span>
+              </div>
+              {samples.length ? (
+                <div className="training-sample-grid">
+                  {samples.slice(-8).map((path: string) => (
+                    <a key={path} href={`${API}/files/${path}`} target="_blank">
+                      <img src={`${API}/files/${path}`} alt="" />
+                      <span>{path.split("/").at(-1)}</span>
+                    </a>
+                  ))}
+                </div>
+              ) : (
+                <p className="training-section-empty">
+                  Generated validation images will appear here.
+                </p>
+              )}
+            </section>
+          </div>
+
+          <section className="training-output">
+            <div className="training-section-heading">
+              <div>
+                <h3>Raw output</h3>
+                <p>Original command-line output for diagnosis and detail</p>
+              </div>
+              <span>{logLines.length} lines</span>
+            </div>
+            <pre>
+              {logLines.join("\n") || "No output was captured for this run."}
+            </pre>
+          </section>
+        </div>
+      )}
+    </>
+  );
+}
+
 function Settings() {
   const s = useStore();
   const [saved, setSaved] = useState(false);
@@ -511,7 +833,7 @@ export default function App() {
     <>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/training" element={<Training />} />
+          <Route path="/training" element={<TrainingMonitor />} />
           <Route path="/datasets" element={<DatasetList />} />
           <Route path="/datasets/:id" element={<DatasetDetail />} />
           <Route

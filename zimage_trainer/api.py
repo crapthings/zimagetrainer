@@ -318,6 +318,12 @@ async def run_training(job_id: str, config_path: Path) -> None:
         stage = re.search(r"STAGE (.+)", line)
         if stage:
             await hub.publish({"type": "stage", "jobId": job_id, "stage": stage[1]})
+        checkpoint_saved = re.search(r"CHECKPOINT saved (.+) step=(\d+)", line)
+        if checkpoint_saved:
+            await hub.publish({"type": "checkpoint", "jobId": job_id, "status": "saved", "path": checkpoint_saved[1], "step": int(checkpoint_saved[2])})
+        checkpoint_removed = re.search(r"CHECKPOINT removed (.+)", line)
+        if checkpoint_removed:
+            await hub.publish({"type": "checkpoint", "jobId": job_id, "status": "pruned", "paths": checkpoint_removed[1].split(", ")})
         if re.search(r"SAMPLE starting", line):
             await hub.publish({"type": "sample", "jobId": job_id, "status": "starting"})
         sample = re.search(r"SAMPLE saved (.+)", line)

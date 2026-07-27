@@ -90,10 +90,10 @@ class Database:
     def job_monitor(self, job_id: str) -> dict[str, Any] | None:
         with self.lock:
             job = self.connection.execute("SELECT id, status, config_json, error FROM jobs WHERE id = ?", (job_id,)).fetchone()
-            rows = self.connection.execute("SELECT event_json FROM events WHERE job_id = ? ORDER BY id ASC", (job_id,)).fetchall()
+            rows = self.connection.execute("SELECT event_json, created_at FROM events WHERE job_id = ? ORDER BY id ASC", (job_id,)).fetchall()
         if not job:
             return None
-        losses, samples, logs, stage = [], [], [], None
+        losses, samples, logs, timeline, stage = [], [], [], [], None
         for row in rows:
             try:
                 event = json.loads(row["event_json"])
@@ -107,6 +107,10 @@ class Database:
                 logs.append(event["line"])
             if event.get("type") == "stage" and event.get("stage"):
                 stage = event["stage"]
+            if event.get("type") in {"stage", "checkpoint", "sample"}:
+                timeline.append({**event, "created_at": row["created_at"]})
+            if event.get("type") == "training" and event.get("status") in {"queued", "running", "completed", "failed"} and "step" not in event:
+                timeline.append({**event, "created_at": row["created_at"]})
         config = json.loads(job["config_json"])
         return {
             "id": job["id"],
@@ -117,6 +121,7 @@ class Database:
             "samples": samples,
             "logs": logs[-500:],
             "stage": stage,
+            "timeline": timeline[-100:],
         }
 
     def add_event(self, event: dict[str, Any]) -> None:

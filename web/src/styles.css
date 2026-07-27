@@ -966,6 +966,309 @@
       transform: translateY(0);
     }
   }
+  .training-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .training-header > div:first-child {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .training-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .training-run-select {
+    max-width: 320px;
+    border: 1px solid var(--app-border);
+    border-radius: 9px;
+    background: var(--app-surface);
+    padding: 8px 32px 8px 10px;
+    color: var(--color-olive-700);
+    font-size: 11px;
+    outline: none;
+  }
+  .training-run-select:focus {
+    border-color: var(--color-olive-500);
+    box-shadow: 0 0 0 3px var(--color-olive-100);
+  }
+  .training-datasets-link {
+    border-radius: 9px;
+    background: var(--color-olive-900);
+    padding: 8px 12px;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .training-datasets-link:hover {
+    background: var(--color-olive-700);
+  }
+  .training-empty {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 24px;
+    color: var(--color-olive-500);
+    font-size: 13px;
+  }
+  .training-empty a {
+    color: var(--color-olive-800);
+    font-weight: 700;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .training-monitor {
+    display: grid;
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .training-statusbar {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-bottom: 1px solid var(--color-olive-200);
+    padding: 0 2px 10px;
+    color: var(--color-olive-500);
+    font-size: 11px;
+  }
+  .training-run-status {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    color: var(--color-olive-800);
+  }
+  .training-run-status code {
+    overflow: hidden;
+    color: var(--color-olive-400);
+    font-size: 10px;
+    text-overflow: ellipsis;
+  }
+  .run-status-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--color-olive-400);
+  }
+  .run-status-running,
+  .run-status-sampling {
+    background: var(--color-emerald-500);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-emerald-500) 12%, transparent);
+  }
+  .run-status-queued {
+    background: var(--color-amber-500);
+  }
+  .run-status-failed {
+    background: var(--color-red-500);
+  }
+  .training-metrics {
+    display: grid;
+    grid-template-columns: minmax(240px, 1.6fr) repeat(3, minmax(110px, 0.7fr));
+    overflow: hidden;
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    background: var(--app-surface);
+  }
+  .training-metrics > div {
+    display: grid;
+    min-height: 86px;
+    align-content: center;
+    gap: 7px;
+    border-left: 1px solid var(--color-olive-100);
+    padding: 14px 16px;
+  }
+  .training-metrics > div:first-child {
+    border-left: 0;
+  }
+  .training-metrics span {
+    color: var(--color-olive-500);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .training-metrics strong {
+    color: var(--color-olive-900);
+    font-size: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .training-metrics strong small {
+    color: var(--color-olive-400);
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .training-progress-metric > div:first-child {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .training-progress-track {
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--color-olive-100);
+  }
+  .training-progress-track i {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--color-olive-700);
+    transition: width 0.3s ease;
+  }
+  .loss-trend-falling {
+    color: var(--color-emerald-700) !important;
+  }
+  .loss-trend-rising {
+    color: var(--color-amber-700) !important;
+  }
+  .training-chart,
+  .training-events,
+  .training-validation,
+  .training-output {
+    border: 1px solid var(--app-border);
+    border-radius: 14px;
+    background: var(--app-surface);
+    padding: 16px;
+  }
+  .training-section-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .training-section-heading h3 {
+    color: var(--color-olive-900);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .training-section-heading p,
+  .training-section-heading > span {
+    margin-top: 2px;
+    color: var(--color-olive-400);
+    font-size: 10px;
+  }
+  .training-insights {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.8fr) minmax(360px, 1.2fr);
+    gap: 14px;
+  }
+  .training-events,
+  .training-validation {
+    min-height: 250px;
+  }
+  .training-event-list {
+    display: grid;
+  }
+  .training-event-list li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 9px;
+    border-top: 1px solid var(--color-olive-100);
+    padding: 9px 0;
+  }
+  .training-event-list li:first-child {
+    border-top: 0;
+  }
+  .event-icon {
+    display: grid;
+    width: 24px;
+    height: 24px;
+    place-items: center;
+    border-radius: 7px;
+    background: var(--color-olive-100);
+    color: var(--color-olive-600);
+    font-size: 10px;
+    font-weight: 800;
+  }
+  .event-icon-success {
+    background: var(--color-emerald-50);
+    color: var(--color-emerald-700);
+  }
+  .event-icon-active {
+    background: var(--color-olive-100);
+    color: var(--color-olive-800);
+  }
+  .event-icon-danger {
+    background: var(--color-red-50);
+    color: var(--color-red-700);
+  }
+  .training-event-list strong {
+    display: block;
+    overflow: hidden;
+    color: var(--color-olive-800);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .training-event-list p {
+    overflow: hidden;
+    margin-top: 1px;
+    color: var(--color-olive-400);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .training-event-list time {
+    color: var(--color-olive-400);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+  }
+  .training-section-empty {
+    display: grid;
+    min-height: 170px;
+    place-items: center;
+    padding: 24px;
+    color: var(--color-olive-400);
+    font-size: 11px;
+    line-height: 1.6;
+    text-align: center;
+  }
+  .training-sample-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .training-sample-grid a {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--color-olive-200);
+    border-radius: 9px;
+    background: var(--color-olive-100);
+  }
+  .training-sample-grid img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+  .training-sample-grid span {
+    display: block;
+    overflow: hidden;
+    background: white;
+    padding: 5px 7px;
+    color: var(--color-olive-500);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .training-output pre {
+    height: 20rem;
+    overflow: auto;
+    border-radius: 9px;
+    background: var(--color-olive-950);
+    padding: 14px;
+    color: var(--color-olive-200);
+    font-size: 11px;
+    line-height: 1.65;
+    white-space: pre-wrap;
+  }
   .panel {
     border: 1px solid var(--app-border);
     border-radius: 16px;
@@ -1077,6 +1380,36 @@
   .empty-workspace {
     padding: 20px;
   }
+  .training-header {
+    align-items: flex-start;
+  }
+  .training-header > div:first-child {
+    display: block;
+  }
+  .training-header-actions {
+    align-items: stretch;
+  }
+  .training-run-select {
+    max-width: 210px;
+  }
+  .training-statusbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .training-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .training-progress-metric {
+    grid-column: 1 / -1;
+    border-bottom: 1px solid var(--color-olive-100);
+  }
+  .training-metrics > div:nth-child(2) {
+    border-left: 0;
+  }
+  .training-insights {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 1279px) {
@@ -1105,6 +1438,28 @@
 }
 
 @media (max-width: 520px) {
+  .training-header {
+    display: grid;
+  }
+  .training-header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .training-run-select {
+    width: 100%;
+    max-width: none;
+  }
+  .training-metrics {
+    grid-template-columns: 1fr 1fr;
+  }
+  .training-metrics > div:nth-child(4) {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--color-olive-100);
+    border-left: 0;
+  }
+  .training-sample-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .dataset-toolbar {
     gap: 6px;
     padding: 6px;

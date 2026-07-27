@@ -149,7 +149,9 @@ def train(config_path: str) -> None:
         if accelerator.is_main_process and (step == 1 or step % train_config.get("log_every", 1) == 0):
             print(f"step {step}/{train_config['steps']}  loss={loss.detach().item():.5f}", flush=True)
         if accelerator.is_main_process and (step % train_config["save_every"] == 0 or step == train_config["steps"]):
-            save_user_lora(accelerator.unwrap_model(transformer), checkpoint_path(output_dir, step), {"base_model": model_config["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+            saved_path = checkpoint_path(output_dir, step)
+            save_user_lora(accelerator.unwrap_model(transformer), saved_path, {"base_model": model_config["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+            print(f"CHECKPOINT saved {saved_path.name} step={step}", flush=True)
             removed = prune_checkpoints(output_dir, train_config["keep_last"])
             if removed:
                 print(f"CHECKPOINT removed {', '.join(path.name for path in removed)}", flush=True)
