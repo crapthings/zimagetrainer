@@ -876,9 +876,6 @@ function TrainingMonitor() {
                   </div>
                   <LossChart points={points} total={total} />
                 </section>
-              </div>
-
-              <div className="training-insights">
                 <section className="training-events">
                   <div className="training-section-heading">
                     <div>
@@ -898,7 +895,7 @@ function TrainingMonitor() {
                                 candidate.stage === event.stage,
                             ),
                         )
-                        .slice(-12)
+                        .slice(-30)
                         .reverse()
                         .map((event, index) => {
                           const item = eventPresentation(event);
@@ -932,7 +929,9 @@ function TrainingMonitor() {
                     </p>
                   )}
                 </section>
+              </div>
 
+              <div className="training-insights">
                 <section className="training-validation">
                   <div className="training-section-heading">
                     <div>
