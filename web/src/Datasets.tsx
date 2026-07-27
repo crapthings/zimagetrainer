@@ -31,6 +31,11 @@ type Dataset = {
   caption_model?: string;
 };
 type Image = { id: string; path: string; caption: string };
+type ValidationSample = {
+  prompt: string;
+  width: number;
+  height: number;
+};
 type TrainingParams = {
   resolution: number;
   rank: number;
@@ -39,8 +44,7 @@ type TrainingParams = {
   keepLast?: number;
   sampleEnabled?: boolean;
   sampleEvery?: number;
-  samplePrompts?: string[];
-  sampleResolution?: number;
+  validationSamples?: ValidationSample[];
 };
 type Suggestion = {
   image_count: number;
@@ -426,8 +430,7 @@ function TrainingPlan({
     keepLast: 3,
     sampleEnabled: true,
     sampleEvery: 250,
-    samplePrompts: [""],
-    sampleResolution: 768,
+    validationSamples: [{ prompt: "", width: 768, height: 768 }],
   });
   useEffect(() => {
     if (suggestion)
@@ -436,11 +439,17 @@ function TrainingPlan({
         ...suggestion.recommended,
         sampleEnabled: current.sampleEnabled ?? true,
         sampleEvery: current.sampleEvery ?? 250,
-        samplePrompts:
-          current.samplePrompts?.some((prompt) => prompt.trim()) === true
-            ? current.samplePrompts
-            : [suggestion.sample_prompt || ""],
-        sampleResolution: current.sampleResolution ?? 768,
+        validationSamples:
+          current.validationSamples?.some((sample) => sample.prompt.trim()) ===
+          true
+            ? current.validationSamples
+            : [
+                {
+                  prompt: suggestion.sample_prompt || "",
+                  width: 768,
+                  height: 768,
+                },
+              ],
       }));
   }, [suggestion?.reason]);
   const applyPreset = (next: "recommended" | "test" | "quality") => {
@@ -469,17 +478,20 @@ function TrainingPlan({
   const keepLast = Math.max(1, params.keepLast ?? 3);
   const checkpointCount = Math.ceil(params.steps / saveEvery);
   const retainedCheckpointCount = Math.min(checkpointCount, keepLast);
-  const samplePrompts = params.samplePrompts?.length
-    ? params.samplePrompts
-    : [""];
+  const validationSamples = params.validationSamples?.length
+    ? params.validationSamples
+    : [{ prompt: "", width: 768, height: 768 }];
   const validationReady =
     !params.sampleEnabled ||
-    samplePrompts.some((prompt) => prompt.trim().length > 0);
-  const updateSamplePrompt = (index: number, value: string) =>
+    validationSamples.some((sample) => sample.prompt.trim().length > 0);
+  const updateValidationSample = (
+    index: number,
+    changes: Partial<ValidationSample>,
+  ) =>
     setParams({
       ...params,
-      samplePrompts: samplePrompts.map((prompt, promptIndex) =>
-        promptIndex === index ? value : prompt,
+      validationSamples: validationSamples.map((sample, sampleIndex) =>
+        sampleIndex === index ? { ...sample, ...changes } : sample,
       ),
     });
   const selected = (name: "recommended" | "test" | "quality") =>
@@ -503,8 +515,10 @@ function TrainingPlan({
           onClick={() => setPanelTab("validation")}
         >
           Validation
-          {samplePrompts.length > 1 && (
-            <span className="training-tab-count">{samplePrompts.length}</span>
+          {validationSamples.length > 1 && (
+            <span className="training-tab-count">
+              {validationSamples.length}
+            </span>
           )}
         </button>
       </div>
@@ -653,7 +667,7 @@ function TrainingPlan({
             </div>
             {params.sampleEnabled && (
               <div className="mt-3 grid gap-3">
-                <div className="grid grid-cols-2 gap-2">
+                <div>
                   <label>
                     Generate every
                     <div className="training-input-suffix">
@@ -669,38 +683,21 @@ function TrainingPlan({
                       <span>steps</span>
                     </div>
                   </label>
-                  <label>
-                    Resolution
-                    <select
-                      className="training-input"
-                      value={params.sampleResolution ?? 768}
-                      onChange={(e) =>
-                        setParams({
-                          ...params,
-                          sampleResolution: +e.target.value,
-                        })
-                      }
-                    >
-                      <option value="512">512 × 512</option>
-                      <option value="768">768 × 768</option>
-                      <option value="1024">1024 × 1024</option>
-                    </select>
-                  </label>
                 </div>
                 <div className="training-prompt-list">
-                  {samplePrompts.map((prompt, index) => (
+                  {validationSamples.map((sample, index) => (
                     <div className="training-prompt-item" key={index}>
                       <div className="flex items-center justify-between gap-2">
                         <span>Prompt {index + 1}</span>
-                        {samplePrompts.length > 1 && (
+                        {validationSamples.length > 1 && (
                           <button
                             type="button"
                             aria-label={`Remove validation prompt ${index + 1}`}
                             onClick={() =>
                               setParams({
                                 ...params,
-                                samplePrompts: samplePrompts.filter(
-                                  (_, promptIndex) => promptIndex !== index,
+                                validationSamples: validationSamples.filter(
+                                  (_, sampleIndex) => sampleIndex !== index,
                                 ),
                               })
                             }
@@ -712,11 +709,37 @@ function TrainingPlan({
                       <textarea
                         className="training-input min-h-20 resize-y p-2"
                         aria-label={`Validation prompt ${index + 1}`}
-                        value={prompt}
+                        value={sample.prompt}
                         onChange={(e) =>
-                          updateSamplePrompt(index, e.target.value)
+                          updateValidationSample(index, {
+                            prompt: e.target.value,
+                          })
                         }
                       />
+                      <label>
+                        Aspect ratio and resolution
+                        <select
+                          className="training-input"
+                          aria-label={`Validation resolution ${index + 1}`}
+                          value={`${sample.width}x${sample.height}`}
+                          onChange={(e) => {
+                            const [width, height] = e.target.value
+                              .split("x")
+                              .map(Number);
+                            updateValidationSample(index, { width, height });
+                          }}
+                        >
+                          <option value="512x512">1:1 · 512 × 512</option>
+                          <option value="768x768">1:1 · 768 × 768</option>
+                          <option value="1024x1024">1:1 · 1024 × 1024</option>
+                          <option value="896x672">4:3 · 896 × 672</option>
+                          <option value="672x896">3:4 · 672 × 896</option>
+                          <option value="960x640">3:2 · 960 × 640</option>
+                          <option value="640x960">2:3 · 640 × 960</option>
+                          <option value="1024x576">16:9 · 1024 × 576</option>
+                          <option value="576x1024">9:16 · 576 × 1024</option>
+                        </select>
+                      </label>
                     </div>
                   ))}
                 </div>
@@ -726,7 +749,10 @@ function TrainingPlan({
                   onClick={() =>
                     setParams({
                       ...params,
-                      samplePrompts: [...samplePrompts, ""],
+                      validationSamples: [
+                        ...validationSamples,
+                        { prompt: "", width: 768, height: 768 },
+                      ],
                     })
                   }
                 >
@@ -983,12 +1009,10 @@ export function DatasetDetail() {
         },
         sample: {
           enabled: !!params.sampleEnabled,
-          prompts: (params.samplePrompts ?? []).filter(
-            (prompt) => prompt.trim().length > 0,
+          samples: (params.validationSamples ?? []).filter(
+            (sample) => sample.prompt.trim().length > 0,
           ),
           every: params.sampleEvery || 250,
-          width: params.sampleResolution || 768,
-          height: params.sampleResolution || 768,
           seed: 42,
         },
       };

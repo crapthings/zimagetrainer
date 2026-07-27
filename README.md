@@ -50,10 +50,11 @@ Use `train.save_every` to control the checkpoint interval and
 `train.keep_last` to retain only the newest exported LoRA files. The final
 checkpoint is always included in the retained set.
 
-Validation previews support multiple prompts and a selectable square
-resolution. Each prompt produces its own deterministic baseline and checkpoint
-image, so one training run can be compared across several subjects or styles.
-Existing configurations that use a single `sample.prompt` remain supported.
+Validation previews support multiple prompts, each with its own resolution and
+common aspect-ratio preset. Each prompt produces its own deterministic baseline
+and checkpoint image, so one training run can be compared across several
+subjects, styles, and output formats. Existing configurations that use
+`sample.prompts` or a single `sample.prompt` remain supported.
 
 ## Use the exported LoRA
 

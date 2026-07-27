@@ -20,9 +20,12 @@ train:
   offload_aux_models: true
 sample:
   enabled: false
-  prompts:
-    - "A representative validation image"
+  samples:
+    - prompt: "A representative square validation image"
+      width: 768
+      height: 768
+    - prompt: "A representative portrait validation image"
+      width: 672
+      height: 896
   every: 250
-  width: 768
-  height: 768
   seed: 42
