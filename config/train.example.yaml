@@ -13,6 +13,7 @@ train:
   gradient_accumulation: 1
   learning_rate: 0.0001
   save_every: 250
+  keep_last: 3
   log_every: 1
   seed: 42
   gradient_checkpointing: true

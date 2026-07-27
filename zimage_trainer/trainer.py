@@ -15,6 +15,7 @@ from accelerate import Accelerator
 from diffusers import ZImagePipeline
 from torch.utils.data import DataLoader
 
+from .checkpoints import checkpoint_path, prune_checkpoints
 from .config import load_config
 from .data import CaptionedImageFolder
 from .lora import LoRALinear, add_lora, merge_training_adapter, save_user_lora
@@ -28,20 +29,31 @@ def generate_sample(config: dict, transformer: torch.nn.Module, accelerator: Acc
     label = "baseline" if baseline else f"step_{step:06d}"
     image_path = samples_dir / f"{label}.png"
     lora_path = None
+    temporary_lora = False
     if not baseline:
-        lora_path = output_dir / f"zimage_lora_step_{step}.safetensors"
-        save_user_lora(accelerator.unwrap_model(transformer), lora_path, {"base_model": config["model"]["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+        saved_checkpoint = checkpoint_path(output_dir, step)
+        if saved_checkpoint.exists():
+            lora_path = saved_checkpoint
+        else:
+            lora_path = samples_dir / f".validation_lora_step_{step}.safetensors"
+            temporary_lora = True
     model = accelerator.unwrap_model(transformer)
-    model.to("cpu")
-    torch.cuda.empty_cache()
     command = [sys.executable, "infer.py", "--prompt", sample["prompt"], "--output", str(image_path), "--seed", str(sample["seed"]), "--width", str(sample["width"]), "--height", str(sample["height"])]
     if lora_path:
         command.extend(["--lora", str(lora_path), "--lora-rank", str(config["lora"]["rank"]), "--lora-alpha", str(config["lora"]["alpha"])])
-    print(f"SAMPLE starting {label}", flush=True)
-    result = subprocess.run(command, check=False)
-    print(f"SAMPLE {'saved ' + image_path.as_posix() if result.returncode == 0 else 'failed ' + label + ' exit=' + str(result.returncode)}", flush=True)
-    model.to(accelerator.device)
-    torch.cuda.empty_cache()
+    try:
+        if temporary_lora and lora_path:
+            save_user_lora(model, lora_path, {"base_model": config["model"]["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+        model.to("cpu")
+        torch.cuda.empty_cache()
+        print(f"SAMPLE starting {label}", flush=True)
+        result = subprocess.run(command, check=False)
+        print(f"SAMPLE {'saved ' + image_path.as_posix() if result.returncode == 0 else 'failed ' + label + ' exit=' + str(result.returncode)}", flush=True)
+    finally:
+        if temporary_lora and lora_path:
+            lora_path.unlink(missing_ok=True)
+        model.to(accelerator.device)
+        torch.cuda.empty_cache()
 
 
 def train(config_path: str) -> None:
@@ -134,7 +146,10 @@ def train(config_path: str) -> None:
         if accelerator.is_main_process and (step == 1 or step % train_config.get("log_every", 1) == 0):
             print(f"step {step}/{train_config['steps']}  loss={loss.detach().item():.5f}", flush=True)
         if accelerator.is_main_process and (step % train_config["save_every"] == 0 or step == train_config["steps"]):
-            save_user_lora(accelerator.unwrap_model(transformer), output_dir / f"zimage_lora_step_{step}.safetensors", {"base_model": model_config["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+            save_user_lora(accelerator.unwrap_model(transformer), checkpoint_path(output_dir, step), {"base_model": model_config["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
+            removed = prune_checkpoints(output_dir, train_config["keep_last"])
+            if removed:
+                print(f"CHECKPOINT removed {', '.join(path.name for path in removed)}", flush=True)
         if accelerator.is_main_process and config["sample"].get("enabled") and (step % config["sample"]["every"] == 0 or step == train_config["steps"]):
             generate_sample(config, transformer, accelerator, step=step)
     accelerator.wait_for_everyone()

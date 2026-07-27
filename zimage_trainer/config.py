@@ -11,7 +11,7 @@ DEFAULTS: dict[str, Any] = {
     "model": {"id": "Tongyi-MAI/Z-Image-Turbo", "training_adapter": "ostris/zimage_turbo_training_adapter/zimage_turbo_training_adapter_v2.safetensors"},
     "data": {"folder": "data/train", "resolution": 1024, "caption_extension": ".txt", "aspect_ratio_bucketing": True},
     "lora": {"rank": 16, "alpha": 16},
-    "train": {"output_dir": "outputs/lora", "steps": 1000, "batch_size": 1, "gradient_accumulation": 1, "learning_rate": 1.0e-4, "save_every": 250, "seed": 42, "log_every": 1, "gradient_checkpointing": True, "offload_aux_models": True},
+    "train": {"output_dir": "outputs/lora", "steps": 1000, "batch_size": 1, "gradient_accumulation": 1, "learning_rate": 1.0e-4, "save_every": 250, "keep_last": 3, "seed": 42, "log_every": 1, "gradient_checkpointing": True, "offload_aux_models": True},
     "sample": {"enabled": False, "prompt": "", "every": 250, "width": 1024, "height": 1024, "seed": 42},
 }
 
@@ -30,6 +30,8 @@ def load_config(path: str | Path) -> dict[str, Any]:
         raise ValueError("data.resolution must be divisible by 16")
     if config["train"]["batch_size"] <= 0 or config["train"]["steps"] <= 0:
         raise ValueError("train.batch_size and train.steps must be positive")
+    if config["train"]["save_every"] <= 0 or config["train"]["keep_last"] <= 0:
+        raise ValueError("train.save_every and train.keep_last must be positive")
     if config["data"].get("aspect_ratio_bucketing", True) and config["train"]["batch_size"] != 1:
         raise ValueError("aspect-ratio bucketing currently requires train.batch_size: 1")
     if config["sample"]["enabled"] and not config["sample"]["prompt"].strip():

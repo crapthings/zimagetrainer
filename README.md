@@ -46,6 +46,9 @@ uv run python train.py config/train.example.yaml
 
 The first training run downloads the base model and the training adapter. The
 LoRA checkpoints are stored under `train.output_dir`.
+Use `train.save_every` to control the checkpoint interval and
+`train.keep_last` to retain only the newest exported LoRA files. The final
+checkpoint is always included in the retained set.
 
 ## Use the exported LoRA
 

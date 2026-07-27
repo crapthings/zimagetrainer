@@ -35,6 +35,8 @@ type TrainingParams = {
   resolution: number;
   rank: number;
   steps: number;
+  saveEvery?: number;
+  keepLast?: number;
   sampleEnabled?: boolean;
   sampleEvery?: number;
   samplePrompt?: string;
@@ -416,6 +418,8 @@ function TrainingPlan({
     resolution: 1024,
     rank: 16,
     steps: 1000,
+    saveEvery: 250,
+    keepLast: 3,
     sampleEnabled: true,
     sampleEvery: 250,
     samplePrompt: "",
@@ -452,6 +456,10 @@ function TrainingPlan({
   const ready = imageCount > 0 && captionedCount === imageCount;
   const recommended = suggestion?.recommended ?? params;
   const qualitySteps = Math.max(1600, suggestion?.recommended.steps ?? 1600);
+  const saveEvery = Math.max(1, params.saveEvery ?? 250);
+  const keepLast = Math.max(1, params.keepLast ?? 3);
+  const checkpointCount = Math.ceil(params.steps / saveEvery);
+  const retainedCheckpointCount = Math.min(checkpointCount, keepLast);
   const selected = (name: "recommended" | "test" | "quality") =>
     `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
@@ -531,6 +539,50 @@ function TrainingPlan({
               />
             </label>
           </div>
+        </section>
+
+        <div className="training-form-divider" role="separator" />
+
+        <section className="training-form-group">
+          <h4 className="training-form-title">Checkpoints</h4>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <label>
+              Save every
+              <div className="training-input-suffix">
+                <input
+                  className="training-input"
+                  type="number"
+                  min="1"
+                  max={params.steps}
+                  value={params.saveEvery ?? 250}
+                  onChange={(e) =>
+                    setParams({ ...params, saveEvery: +e.target.value })
+                  }
+                />
+                <span>steps</span>
+              </div>
+            </label>
+            <label>
+              Keep latest
+              <div className="training-input-suffix">
+                <input
+                  className="training-input"
+                  type="number"
+                  min="1"
+                  value={params.keepLast ?? 3}
+                  onChange={(e) =>
+                    setParams({ ...params, keepLast: +e.target.value })
+                  }
+                />
+                <span>files</span>
+              </div>
+            </label>
+          </div>
+          <p className="mt-2 text-[10px] text-olive-500">
+            Creates {checkpointCount} checkpoint
+            {checkpointCount === 1 ? "" : "s"}; keeps the latest{" "}
+            {retainedCheckpointCount}, including the final model.
+          </p>
         </section>
 
         <div className="training-form-divider" role="separator" />
@@ -817,7 +869,11 @@ export function DatasetDetail() {
           batch_size: 1,
           gradient_accumulation: 1,
           learning_rate: 0.0001,
-          save_every: Math.min(250, params.steps),
+          save_every: Math.max(
+            1,
+            Math.min(params.saveEvery ?? 250, params.steps),
+          ),
+          keep_last: Math.max(1, params.keepLast ?? 3),
           seed: 42,
         },
         sample: {
