@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   autoUpdate,
   flip,
+  FloatingFocusManager,
+  FloatingOverlay,
   FloatingPortal,
   offset,
   shift,
@@ -932,9 +933,22 @@ function TrainingPlan({
 }
 
 export function DatasetList() {
-  const queryClient = useQueryClient(),
-    parentRef = useRef<HTMLDivElement>(null),
-    [name, setName] = useState("");
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [name, setName] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const createDialog = useFloating({
+    open: createOpen,
+    onOpenChange: (open) => {
+      setCreateOpen(open);
+      if (!open) setName("");
+    },
+  });
+  const createInteractions = useInteractions([
+    useClick(createDialog.context),
+    useDismiss(createDialog.context, { outsidePress: true }),
+    useRole(createDialog.context, { role: "dialog" }),
+  ]);
   const { data: datasets = [], isLoading } = useQuery({
     queryKey: ["datasets"],
     queryFn: getDatasets,
@@ -947,80 +961,120 @@ export function DatasetList() {
         body: JSON.stringify({ name }),
       });
       if (!r.ok) throw new Error("Could not create dataset");
+      return (await r.json()) as Dataset;
     },
-    onSuccess: () => {
+    onSuccess: (dataset) => {
       setName("");
+      setCreateOpen(false);
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      navigate(`/datasets/${dataset.id}`);
     },
-  });
-  const virtual = useVirtualizer({
-    count: datasets.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
-    overscan: 8,
   });
   return (
     <>
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Datasets</h2>
-        <span className="text-xs text-olive-500">
-          Create and manage training data
-        </span>
-      </header>
-      <section className="panel mt-4 flex flex-col gap-2 sm:flex-row">
-        <input
-          className="min-w-0 flex-1 rounded-md border border-olive-200 px-2 py-1.5 text-xs"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Dataset name, for example: studio-portraits"
-        />
+      <header className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <h2 className="text-2xl font-semibold tracking-tight">Datasets</h2>
+          <span className="text-xs text-olive-500">
+            Create and manage training data
+          </span>
+        </div>
         <button
-          className="w-full shrink-0 whitespace-nowrap rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40 sm:w-auto"
-          disabled={!name.trim() || create.isPending}
-          onClick={() => create.mutate()}
+          ref={createDialog.refs.setReference}
+          className="rounded-lg bg-olive-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-olive-700"
+          {...createInteractions.getReferenceProps()}
         >
           New dataset
         </button>
+      </header>
+
+      <section className="dataset-card-grid">
+        {isLoading ? (
+          <p className="text-xs text-olive-500">Loading datasets…</p>
+        ) : datasets.length ? (
+          datasets.map((dataset) => (
+            <Link
+              key={dataset.id}
+              to={`/datasets/${dataset.id}`}
+              className="dataset-card"
+            >
+              <div className="dataset-card-cover">
+                {dataset.cover_path ? (
+                  <img src={`${API}/files/${dataset.cover_path}`} alt="" />
+                ) : (
+                  <span>Empty dataset</span>
+                )}
+              </div>
+              <div className="dataset-card-body">
+                <h3>{dataset.name}</h3>
+                <p>
+                  {dataset.image_count} image
+                  {dataset.image_count === 1 ? "" : "s"}
+                  <span aria-hidden="true"> · </span>
+                  {new Date(`${dataset.created_at}Z`).toLocaleDateString()}
+                </p>
+              </div>
+            </Link>
+          ))
+        ) : (
+          <div className="dataset-card-empty">
+            <h3>No datasets yet</h3>
+            <p>
+              Create your first dataset to upload and caption training images.
+            </p>
+          </div>
+        )}
       </section>
-      <section
-        ref={parentRef}
-        className="panel mt-3 h-[calc(100vh-174px)] overflow-auto p-0"
-      >
-        <div style={{ height: virtual.getTotalSize(), position: "relative" }}>
-          {isLoading ? (
-            <p className="p-3 text-xs text-olive-500">Loading datasets…</p>
-          ) : (
-            virtual.getVirtualItems().map((row) => {
-              const d = datasets[row.index];
-              return (
-                <Link
-                  key={d.id}
-                  to={`/datasets/${d.id}`}
-                  className="absolute left-0 top-0 flex h-[72px] w-full items-center gap-3 border-b border-olive-100 px-3 hover:bg-olive-50"
-                  style={{ transform: `translateY(${row.start}px)` }}
-                >
-                  <div className="h-10 w-10 overflow-hidden rounded-md bg-olive-100">
-                    {d.cover_path && (
-                      <img
-                        className="h-full w-full object-cover"
-                        src={`${API}/files/${d.cover_path}`}
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-sm font-semibold">{d.name}</h3>
-                    <p className="mt-0.5 text-[11px] text-olive-500">
-                      {d.image_count} images ·{" "}
-                      {new Date(`${d.created_at}Z`).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <span className="text-olive-400">›</span>
-                </Link>
-              );
-            })
-          )}
-        </div>
-      </section>
+
+      {createOpen && (
+        <FloatingPortal>
+          <FloatingOverlay className="dataset-create-overlay" lockScroll>
+            <FloatingFocusManager context={createDialog.context}>
+              <form
+                ref={createDialog.refs.setFloating}
+                className="dataset-create-dialog"
+                aria-labelledby="create-dataset-title"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (name.trim()) create.mutate();
+                }}
+                {...createInteractions.getFloatingProps()}
+              >
+                <div>
+                  <h2 id="create-dataset-title">New dataset</h2>
+                  <p>Give this training image collection a clear name.</p>
+                </div>
+                <label>
+                  Name
+                  <input
+                    autoFocus
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Studio portraits"
+                  />
+                </label>
+                <div className="dataset-create-actions">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setName("");
+                      setCreateOpen(false);
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!name.trim() || create.isPending}
+                  >
+                    {create.isPending ? "Creating…" : "Create dataset"}
+                  </button>
+                </div>
+              </form>
+            </FloatingFocusManager>
+          </FloatingOverlay>
+        </FloatingPortal>
+      )}
     </>
   );
 }
