@@ -39,7 +39,8 @@ type TrainingParams = {
   keepLast?: number;
   sampleEnabled?: boolean;
   sampleEvery?: number;
-  samplePrompt?: string;
+  samplePrompts?: string[];
+  sampleResolution?: number;
 };
 type Suggestion = {
   image_count: number;
@@ -414,6 +415,9 @@ function TrainingPlan({
   const [preset, setPreset] = useState<"recommended" | "test" | "quality">(
     "recommended",
   );
+  const [panelTab, setPanelTab] = useState<"training" | "validation">(
+    "training",
+  );
   const [params, setParams] = useState<TrainingParams>({
     resolution: 1024,
     rank: 16,
@@ -422,7 +426,8 @@ function TrainingPlan({
     keepLast: 3,
     sampleEnabled: true,
     sampleEvery: 250,
-    samplePrompt: "",
+    samplePrompts: [""],
+    sampleResolution: 768,
   });
   useEffect(() => {
     if (suggestion)
@@ -431,7 +436,11 @@ function TrainingPlan({
         ...suggestion.recommended,
         sampleEnabled: current.sampleEnabled ?? true,
         sampleEvery: current.sampleEvery ?? 250,
-        samplePrompt: current.samplePrompt || suggestion.sample_prompt || "",
+        samplePrompts:
+          current.samplePrompts?.some((prompt) => prompt.trim()) === true
+            ? current.samplePrompts
+            : [suggestion.sample_prompt || ""],
+        sampleResolution: current.sampleResolution ?? 768,
       }));
   }, [suggestion?.reason]);
   const applyPreset = (next: "recommended" | "test" | "quality") => {
@@ -460,186 +469,277 @@ function TrainingPlan({
   const keepLast = Math.max(1, params.keepLast ?? 3);
   const checkpointCount = Math.ceil(params.steps / saveEvery);
   const retainedCheckpointCount = Math.min(checkpointCount, keepLast);
+  const samplePrompts = params.samplePrompts?.length
+    ? params.samplePrompts
+    : [""];
+  const validationReady =
+    !params.sampleEnabled ||
+    samplePrompts.some((prompt) => prompt.trim().length > 0);
+  const updateSamplePrompt = (index: number, value: string) =>
+    setParams({
+      ...params,
+      samplePrompts: samplePrompts.map((prompt, promptIndex) =>
+        promptIndex === index ? value : prompt,
+      ),
+    });
   const selected = (name: "recommended" | "test" | "quality") =>
     `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
     <section className="training-panel">
       <h3 className="text-sm font-semibold">Training</h3>
-      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+      <div className="training-tabs" role="tablist" aria-label="Training setup">
         <button
-          className={selected("recommended")}
-          onClick={() => applyPreset("recommended")}
+          role="tab"
+          aria-selected={panelTab === "training"}
+          className={panelTab === "training" ? "training-tab-active" : ""}
+          onClick={() => setPanelTab("training")}
         >
-          <span className="block text-xs font-semibold text-olive-800">
-            Recommended
-          </span>
-          <span className="mt-1 block text-[10px] text-olive-500">
-            {recommended.resolution}px · R{recommended.rank} ·{" "}
-            {recommended.steps} steps
-          </span>
+          Training
         </button>
         <button
-          className={selected("test")}
-          onClick={() => applyPreset("test")}
+          role="tab"
+          aria-selected={panelTab === "validation"}
+          className={panelTab === "validation" ? "training-tab-active" : ""}
+          onClick={() => setPanelTab("validation")}
         >
-          <span className="block text-xs font-semibold text-olive-800">
-            Fast test
-          </span>
-          <span className="mt-1 block text-[10px] text-olive-500">
-            768px · R8 · 500 steps
-          </span>
-        </button>
-        <button
-          className={selected("quality")}
-          onClick={() => applyPreset("quality")}
-        >
-          <span className="block text-xs font-semibold text-olive-800">
-            Higher detail
-          </span>
-          <span className="mt-1 block text-[10px] text-olive-500">
-            1024px · R32 · {qualitySteps} steps
-          </span>
+          Validation
+          {samplePrompts.length > 1 && (
+            <span className="training-tab-count">{samplePrompts.length}</span>
+          )}
         </button>
       </div>
-      <div className="training-form">
-        <section className="training-form-group">
-          <h4 className="training-form-title">Training parameters</h4>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <label>
-              Resolution
-              <input
-                className="training-input"
-                type="number"
-                value={params.resolution}
-                onChange={(e) =>
-                  setParams({ ...params, resolution: +e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Rank
-              <input
-                className="training-input"
-                type="number"
-                value={params.rank}
-                onChange={(e) =>
-                  setParams({ ...params, rank: +e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Steps
-              <input
-                className="training-input"
-                type="number"
-                value={params.steps}
-                onChange={(e) =>
-                  setParams({ ...params, steps: +e.target.value })
-                }
-              />
-            </label>
-          </div>
-        </section>
 
-        <div className="training-form-divider" role="separator" />
-
-        <section className="training-form-group">
-          <h4 className="training-form-title">Checkpoints</h4>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <label>
-              Save every
-              <div className="training-input-suffix">
-                <input
-                  className="training-input"
-                  type="number"
-                  min="1"
-                  max={params.steps}
-                  value={params.saveEvery ?? 250}
-                  onChange={(e) =>
-                    setParams({ ...params, saveEvery: +e.target.value })
-                  }
-                />
-                <span>steps</span>
-              </div>
-            </label>
-            <label>
-              Keep latest
-              <div className="training-input-suffix">
-                <input
-                  className="training-input"
-                  type="number"
-                  min="1"
-                  value={params.keepLast ?? 3}
-                  onChange={(e) =>
-                    setParams({ ...params, keepLast: +e.target.value })
-                  }
-                />
-                <span>files</span>
-              </div>
-            </label>
-          </div>
-          <p className="mt-2 text-[10px] text-olive-500">
-            Creates {checkpointCount} checkpoint
-            {checkpointCount === 1 ? "" : "s"}; keeps the latest{" "}
-            {retainedCheckpointCount}, including the final model.
-          </p>
-        </section>
-
-        <div className="training-form-divider" role="separator" />
-
-        <section className="training-form-group">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h4 className="training-form-title">Validation images</h4>
-            </div>
-            <label
-              className="training-toggle"
-              title="Generate validation images"
+      {panelTab === "training" ? (
+        <>
+          <div className="mt-3 grid gap-2 sm:grid-cols-3">
+            <button
+              className={selected("recommended")}
+              onClick={() => applyPreset("recommended")}
             >
-              <input
-                type="checkbox"
-                aria-label="Generate validation images"
-                checked={!!params.sampleEnabled}
-                onChange={(e) =>
-                  setParams({ ...params, sampleEnabled: e.target.checked })
-                }
-              />
-            </label>
+              <span className="block text-xs font-semibold text-olive-800">
+                Recommended
+              </span>
+              <span className="mt-1 block text-[10px] text-olive-500">
+                {recommended.resolution}px · R{recommended.rank} ·{" "}
+                {recommended.steps} steps
+              </span>
+            </button>
+            <button
+              className={selected("test")}
+              onClick={() => applyPreset("test")}
+            >
+              <span className="block text-xs font-semibold text-olive-800">
+                Fast test
+              </span>
+              <span className="mt-1 block text-[10px] text-olive-500">
+                768px · R8 · 500 steps
+              </span>
+            </button>
+            <button
+              className={selected("quality")}
+              onClick={() => applyPreset("quality")}
+            >
+              <span className="block text-xs font-semibold text-olive-800">
+                Higher detail
+              </span>
+              <span className="mt-1 block text-[10px] text-olive-500">
+                1024px · R32 · {qualitySteps} steps
+              </span>
+            </button>
           </div>
-          {params.sampleEnabled && (
-            <div className="mt-3 grid gap-3">
-              <label>
-                Generate every
-                <div className="training-input-suffix">
+          <div className="training-form">
+            <section className="training-form-group">
+              <h4 className="training-form-title">Training parameters</h4>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <label>
+                  Resolution
                   <input
                     className="training-input"
                     type="number"
-                    min="1"
-                    value={params.sampleEvery}
+                    value={params.resolution}
                     onChange={(e) =>
-                      setParams({ ...params, sampleEvery: +e.target.value })
+                      setParams({ ...params, resolution: +e.target.value })
                     }
                   />
-                  <span>steps</span>
-                </div>
-              </label>
-              <label>
-                Validation prompt
-                <textarea
-                  className="training-input min-h-20 resize-y p-2"
-                  value={params.samplePrompt}
+                </label>
+                <label>
+                  Rank
+                  <input
+                    className="training-input"
+                    type="number"
+                    value={params.rank}
+                    onChange={(e) =>
+                      setParams({ ...params, rank: +e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Steps
+                  <input
+                    className="training-input"
+                    type="number"
+                    value={params.steps}
+                    onChange={(e) =>
+                      setParams({ ...params, steps: +e.target.value })
+                    }
+                  />
+                </label>
+              </div>
+            </section>
+
+            <div className="training-form-divider" role="separator" />
+
+            <section className="training-form-group">
+              <h4 className="training-form-title">Checkpoints</h4>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label>
+                  Save every
+                  <div className="training-input-suffix">
+                    <input
+                      className="training-input"
+                      type="number"
+                      min="1"
+                      max={params.steps}
+                      value={params.saveEvery ?? 250}
+                      onChange={(e) =>
+                        setParams({ ...params, saveEvery: +e.target.value })
+                      }
+                    />
+                    <span>steps</span>
+                  </div>
+                </label>
+                <label>
+                  Keep latest
+                  <div className="training-input-suffix">
+                    <input
+                      className="training-input"
+                      type="number"
+                      min="1"
+                      value={params.keepLast ?? 3}
+                      onChange={(e) =>
+                        setParams({ ...params, keepLast: +e.target.value })
+                      }
+                    />
+                    <span>files</span>
+                  </div>
+                </label>
+              </div>
+              <p className="mt-2 text-[10px] text-olive-500">
+                Creates {checkpointCount} checkpoint
+                {checkpointCount === 1 ? "" : "s"}; keeps the latest{" "}
+                {retainedCheckpointCount}, including the final model.
+              </p>
+            </section>
+          </div>
+        </>
+      ) : (
+        <div className="training-form">
+          <section className="training-form-group">
+            <div className="flex items-start justify-between gap-4">
+              <h4 className="training-form-title">Validation images</h4>
+              <label
+                className="training-toggle"
+                title="Generate validation images"
+              >
+                <input
+                  type="checkbox"
+                  aria-label="Generate validation images"
+                  checked={!!params.sampleEnabled}
                   onChange={(e) =>
-                    setParams({ ...params, samplePrompt: e.target.value })
+                    setParams({ ...params, sampleEnabled: e.target.checked })
                   }
                 />
               </label>
             </div>
-          )}
-        </section>
-      </div>
+            {params.sampleEnabled && (
+              <div className="mt-3 grid gap-3">
+                <div className="grid grid-cols-2 gap-2">
+                  <label>
+                    Generate every
+                    <div className="training-input-suffix">
+                      <input
+                        className="training-input"
+                        type="number"
+                        min="1"
+                        value={params.sampleEvery}
+                        onChange={(e) =>
+                          setParams({ ...params, sampleEvery: +e.target.value })
+                        }
+                      />
+                      <span>steps</span>
+                    </div>
+                  </label>
+                  <label>
+                    Resolution
+                    <select
+                      className="training-input"
+                      value={params.sampleResolution ?? 768}
+                      onChange={(e) =>
+                        setParams({
+                          ...params,
+                          sampleResolution: +e.target.value,
+                        })
+                      }
+                    >
+                      <option value="512">512 × 512</option>
+                      <option value="768">768 × 768</option>
+                      <option value="1024">1024 × 1024</option>
+                    </select>
+                  </label>
+                </div>
+                <div className="training-prompt-list">
+                  {samplePrompts.map((prompt, index) => (
+                    <div className="training-prompt-item" key={index}>
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Prompt {index + 1}</span>
+                        {samplePrompts.length > 1 && (
+                          <button
+                            type="button"
+                            aria-label={`Remove validation prompt ${index + 1}`}
+                            onClick={() =>
+                              setParams({
+                                ...params,
+                                samplePrompts: samplePrompts.filter(
+                                  (_, promptIndex) => promptIndex !== index,
+                                ),
+                              })
+                            }
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                      <textarea
+                        className="training-input min-h-20 resize-y p-2"
+                        aria-label={`Validation prompt ${index + 1}`}
+                        value={prompt}
+                        onChange={(e) =>
+                          updateSamplePrompt(index, e.target.value)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className="training-add-prompt"
+                  onClick={() =>
+                    setParams({
+                      ...params,
+                      samplePrompts: [...samplePrompts, ""],
+                    })
+                  }
+                >
+                  + Add prompt
+                </button>
+              </div>
+            )}
+          </section>
+        </div>
+      )}
       <button
         className="mt-3 w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!ready || queuing}
+        disabled={!ready || !validationReady || queuing}
         onClick={() => onQueue(params)}
       >
         {queuing ? "Adding training run…" : "Start training"}
@@ -650,6 +750,11 @@ function TrainingPlan({
       {!ready && (
         <p className="mt-2 text-[11px] text-amber-700">
           Add images and make sure each image has a caption before training.
+        </p>
+      )}
+      {!validationReady && (
+        <p className="mt-2 text-[11px] text-amber-700">
+          Add at least one validation prompt before training.
         </p>
       )}
     </section>
@@ -878,10 +983,12 @@ export function DatasetDetail() {
         },
         sample: {
           enabled: !!params.sampleEnabled,
-          prompt: params.samplePrompt || "",
+          prompts: (params.samplePrompts ?? []).filter(
+            (prompt) => prompt.trim().length > 0,
+          ),
           every: params.sampleEvery || 250,
-          width: 1024,
-          height: 1024,
+          width: params.sampleResolution || 768,
+          height: params.sampleResolution || 768,
           seed: 42,
         },
       };

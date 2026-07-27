@@ -18,3 +18,11 @@ train:
   seed: 42
   gradient_checkpointing: true
   offload_aux_models: true
+sample:
+  enabled: false
+  prompts:
+    - "A representative validation image"
+  every: 250
+  width: 768
+  height: 768
+  seed: 42

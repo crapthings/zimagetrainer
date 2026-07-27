@@ -293,7 +293,8 @@ function Dashboard() {
               <div>
                 <h3 className="text-sm">Validation images</h3>
                 <p className="mt-0.5 text-[11px] text-olive-500">
-                  Baseline and checkpoint outputs use the same prompt and seed.
+                  Each configured prompt generates a deterministic baseline and
+                  checkpoint preview.
                 </p>
               </div>
               <span className="text-[11px] text-olive-500">

@@ -16,7 +16,7 @@ from diffusers import ZImagePipeline
 from torch.utils.data import DataLoader
 
 from .checkpoints import checkpoint_path, prune_checkpoints
-from .config import load_config
+from .config import load_config, validation_prompts
 from .data import CaptionedImageFolder
 from .lora import LoRALinear, add_lora, merge_training_adapter, save_user_lora
 
@@ -27,7 +27,7 @@ def generate_sample(config: dict, transformer: torch.nn.Module, accelerator: Acc
     samples_dir = output_dir / "samples"
     samples_dir.mkdir(parents=True, exist_ok=True)
     label = "baseline" if baseline else f"step_{step:06d}"
-    image_path = samples_dir / f"{label}.png"
+    prompts = validation_prompts(sample)
     lora_path = None
     temporary_lora = False
     if not baseline:
@@ -38,17 +38,20 @@ def generate_sample(config: dict, transformer: torch.nn.Module, accelerator: Acc
             lora_path = samples_dir / f".validation_lora_step_{step}.safetensors"
             temporary_lora = True
     model = accelerator.unwrap_model(transformer)
-    command = [sys.executable, "infer.py", "--prompt", sample["prompt"], "--output", str(image_path), "--seed", str(sample["seed"]), "--width", str(sample["width"]), "--height", str(sample["height"])]
-    if lora_path:
-        command.extend(["--lora", str(lora_path), "--lora-rank", str(config["lora"]["rank"]), "--lora-alpha", str(config["lora"]["alpha"])])
     try:
         if temporary_lora and lora_path:
             save_user_lora(model, lora_path, {"base_model": config["model"]["id"], "rank": str(config["lora"]["rank"]), "format": "zimage-trainer-v1"})
         model.to("cpu")
         torch.cuda.empty_cache()
-        print(f"SAMPLE starting {label}", flush=True)
-        result = subprocess.run(command, check=False)
-        print(f"SAMPLE {'saved ' + image_path.as_posix() if result.returncode == 0 else 'failed ' + label + ' exit=' + str(result.returncode)}", flush=True)
+        for index, prompt in enumerate(prompts, start=1):
+            image_label = label if len(prompts) == 1 else f"{label}_{index:02d}"
+            image_path = samples_dir / f"{image_label}.png"
+            command = [sys.executable, "infer.py", "--prompt", prompt, "--output", str(image_path), "--seed", str(sample["seed"] + index - 1), "--width", str(sample["width"]), "--height", str(sample["height"])]
+            if lora_path:
+                command.extend(["--lora", str(lora_path), "--lora-rank", str(config["lora"]["rank"]), "--lora-alpha", str(config["lora"]["alpha"])])
+            print(f"SAMPLE starting {image_label}", flush=True)
+            result = subprocess.run(command, check=False)
+            print(f"SAMPLE {'saved ' + image_path.as_posix() if result.returncode == 0 else 'failed ' + image_label + ' exit=' + str(result.returncode)}", flush=True)
     finally:
         if temporary_lora and lora_path:
             lora_path.unlink(missing_ok=True)
