@@ -97,14 +97,11 @@ function Layout() {
           <h1>Z-Forge</h1>
         </div>
         <nav className="mt-8 grid gap-1">
-          <NavLink className={nav} to="/dashboard">
-            Workspace
-          </NavLink>
           <NavLink className={nav} to="/datasets">
             Datasets
           </NavLink>
-          <NavLink className={nav} to="/jobs">
-            Runs
+          <NavLink className={nav} to="/training">
+            Training
           </NavLink>
           <NavLink className={nav} to="/settings">
             Settings
@@ -178,7 +175,15 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
   );
 }
 
-function Dashboard() {
+type Job = {
+  status: string;
+  created_at: string;
+  returncode: number | null;
+  error?: string;
+  config: string;
+};
+
+function Training() {
   const s = useStore();
   const { data: jobData = { jobs: {} } } = useQuery({
     queryKey: ["jobs"],
@@ -220,7 +225,7 @@ function Dashboard() {
   return (
     <>
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-semibold tracking-tight">Workspace</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Training</h2>
         <Link
           className="whitespace-nowrap rounded-lg bg-olive-900 px-3 py-2 text-xs font-semibold text-white transition hover:bg-olive-700"
           to="/datasets"
@@ -329,17 +334,10 @@ function Dashboard() {
           </section>
         </>
       )}
+      <RunBrowser />
     </>
   );
 }
-
-type Job = {
-  status: string;
-  created_at: string;
-  returncode: number | null;
-  error?: string;
-  config: string;
-};
 
 function JobRow({
   id,
@@ -378,7 +376,7 @@ function JobRow({
   );
 }
 
-function Jobs() {
+function RunBrowser() {
   const s = useStore();
   const [selectedId, setSelectedId] = useState<string>();
   const { data = { jobs: {} } } = useQuery({
@@ -411,26 +409,20 @@ function Jobs() {
   const logLines = monitor?.logs?.length ? monitor.logs : s.training.logs;
   return (
     <>
-      <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Runs</h2>
-        <span className="text-xs text-olive-500">
-          Training queue and history
-        </span>
-      </header>
       <section className="panel mt-4">
         <div className="mb-2 flex items-center justify-between">
-          <h3 className="text-sm">Current runs</h3>
+          <h3 className="text-sm">Runs</h3>
           <span className="text-[11px] text-olive-500">
-            Select a run to inspect its output
+            Queue and recent history
           </span>
         </div>
-        {current.length === 0 ? (
+        {jobs.length === 0 ? (
           <p className="text-xs text-olive-500">
-            Nothing is training right now. Start a run from a ready dataset.
+            No training runs yet. Start one from a ready dataset.
           </p>
         ) : (
           <div className="divide-y divide-olive-100">
-            {current.map(([id, job]) => (
+            {[...current, ...history].slice(0, 12).map(([id, job]) => (
               <JobRow
                 key={id}
                 id={id}
@@ -442,33 +434,17 @@ function Jobs() {
           </div>
         )}
       </section>
-      {history.length > 0 && (
+      {activeId && (
         <section className="panel mt-3">
-          <h3 className="text-sm">Recent history</h3>
-          <div className="mt-2 divide-y divide-olive-100">
-            {history.slice(0, 12).map(([id, job]) => (
-              <JobRow
-                key={id}
-                id={id}
-                job={job}
-                selected={activeId === id}
-                onSelect={() => setSelectedId(id)}
-              />
-            ))}
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm">Run output</h3>
+            <code className="text-[11px] text-olive-400">{activeId}</code>
           </div>
+          <pre className="mt-3 h-[24rem] overflow-auto rounded-md bg-olive-950 p-3 text-xs text-olive-200">
+            {logLines.join("\n") || "No output was captured for this run."}
+          </pre>
         </section>
       )}
-      <section className="panel mt-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm">Run output</h3>
-          {activeId && (
-            <code className="text-[11px] text-olive-400">{activeId}</code>
-          )}
-        </div>
-        <pre className="mt-3 h-[24rem] overflow-auto rounded-md bg-olive-950 p-3 text-xs text-olive-200">
-          {logLines.join("\n") || "Select a run to inspect its output."}
-        </pre>
-      </section>
     </>
   );
 }
@@ -535,16 +511,20 @@ export default function App() {
     <>
       <Routes>
         <Route element={<Layout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/training" element={<Training />} />
           <Route path="/datasets" element={<DatasetList />} />
           <Route path="/datasets/:id" element={<DatasetDetail />} />
           <Route
             path="/dataset"
             element={<Navigate to="/datasets" replace />}
           />
-          <Route path="/jobs" element={<Jobs />} />
+          <Route
+            path="/dashboard"
+            element={<Navigate to="/training" replace />}
+          />
+          <Route path="/jobs" element={<Navigate to="/training" replace />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/training" replace />} />
         </Route>
       </Routes>
       <GlobalErrorNotice />
