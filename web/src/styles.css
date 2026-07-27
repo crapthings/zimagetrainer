@@ -171,6 +171,15 @@
     align-items: center;
     gap: 8px;
   }
+  .dataset-header-stats {
+    margin-top: 4px;
+    color: #64748b;
+    font-size: 11px;
+  }
+  .dataset-header-stats strong {
+    color: #334155;
+    font-weight: 750;
+  }
   .dataset-menu-trigger {
     display: grid;
     width: 30px;
@@ -246,13 +255,13 @@
     align-items: center;
   }
   .dataset-upload-button {
-    white-space: nowrap;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
     border-radius: 8px;
     background: #0891b2;
-    padding: 8px 12px;
     color: #fff;
-    font-size: 12px;
-    font-weight: 700;
   }
   .dataset-upload-button:hover {
     background: #0e7490;
@@ -272,29 +281,19 @@
     background: #ecfeff;
   }
   .caption-combo-main {
-    display: flex;
-    min-width: 190px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    min-width: 112px;
     padding: 7px 11px;
     color: #0e7490;
     font-size: 12px;
     font-weight: 700;
   }
-  .caption-combo-main small {
-    max-width: 118px;
-    overflow: hidden;
-    color: #64748b;
-    font-size: 10px;
-    font-weight: 600;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .caption-combo-toggle {
-    display: grid;
+    display: inline-flex;
     width: 34px;
-    place-items: center;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 0;
     border-left: 1px solid #a5f3fc;
     color: #0e7490;
     font-size: 13px;
@@ -323,6 +322,15 @@
     font-weight: 750;
     letter-spacing: 0.08em;
     text-transform: uppercase;
+  }
+  .caption-current-model {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 11px;
+  }
+  .caption-current-model strong {
+    color: #334155;
+    font-weight: 700;
   }
   .caption-key-warning {
     display: block;
@@ -542,25 +550,22 @@
     padding: 6px;
   }
   .dataset-upload-button {
-    padding: 7px 9px;
+    width: 32px;
+    height: 32px;
   }
   .caption-combo-main {
-    min-width: 145px;
-    gap: 6px;
+    min-width: 108px;
     padding: 7px 8px;
-  }
-  .caption-combo-main small {
-    max-width: 66px;
   }
   .caption-combo-toggle {
     width: 30px;
   }
   .dataset-header {
-    display: block;
+    display: flex;
   }
   .dataset-header-actions {
-    justify-content: space-between;
-    margin-top: 10px;
+    justify-content: flex-end;
+    margin-top: 0;
   }
   .dataset-gallery {
     grid-template-columns: repeat(2, minmax(0, 1fr));

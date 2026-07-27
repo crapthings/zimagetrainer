@@ -107,7 +107,6 @@ function CaptionActions({
           onClick={onCaption}
         >
           <span>{captioning ? "Captioning…" : "Caption missing"}</span>
-          <small>{selected.name}</small>
         </button>
         <button
           ref={refs.setReference}
@@ -116,7 +115,16 @@ function CaptionActions({
           disabled={captioning}
           {...getReferenceProps()}
         >
-          <span aria-hidden="true">⌄</span>
+          <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14">
+            <path
+              d="m4 6 4 4 4-4"
+              fill="none"
+              stroke="currentColor"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="1.75"
+            />
+          </svg>
         </button>
       </div>
 
@@ -134,6 +142,9 @@ function CaptionActions({
               </Link>
             )}
             <p className="caption-options-label">Caption model</p>
+            <p className="caption-current-model">
+              Current: <strong>{selected.name}</strong>
+            </p>
             <div className="mt-1 grid gap-1">
               {captionModels.map((candidate) => (
                 <button
@@ -882,14 +893,12 @@ export function DatasetDetail() {
                 {data.dataset.name}
               </h2>
             </div>
-            <p className="mt-1 truncate text-xs text-slate-500">
-              {data.dataset.folder}
+            <p className="dataset-header-stats">
+              <strong>{data.images.length}</strong> images ·{" "}
+              <strong>{captionedCount}</strong> captioned
             </p>
           </div>
           <div className="dataset-header-actions">
-            <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-semibold text-slate-600">
-              {data.images.length} images · {captionedCount} captioned
-            </span>
             <DatasetActions
               onDelete={() => removeDataset.mutate()}
               deleting={removeDataset.isPending}
@@ -901,9 +910,27 @@ export function DatasetDetail() {
           <div className="dataset-upload-tools">
             <button
               className="dataset-upload-button"
+              aria-label={
+                upload.isPending ? "Uploading images" : "Upload images"
+              }
+              title={upload.isPending ? "Uploading images" : "Upload images"}
               onClick={() => filesRef.current?.click()}
             >
-              {upload.isPending ? "Uploading…" : "Upload images"}
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 20 20"
+                width="17"
+                height="17"
+              >
+                <path
+                  d="M10 13V3m0 0L6.5 6.5M10 3l3.5 3.5M4 11.5v3A1.5 1.5 0 0 0 5.5 16h9a1.5 1.5 0 0 0 1.5-1.5v-3"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="1.7"
+                />
+              </svg>
             </button>
             <input
               ref={filesRef}
@@ -957,28 +984,28 @@ export function DatasetDetail() {
             )}
           </section>
         )}
-        <section className="actionbar mt-4">
-          <div className="text-xs text-slate-500">
-            {enqueueTraining.isSuccess
-              ? "Training added to queue"
-              : selectedIds.size
-                ? `${selectedIds.size} images selected`
-                : "Click an image to review its caption"}
-          </div>
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <ConfirmAction
-                danger
-                label={`Delete ${selectedIds.size} selected`}
-                title="Delete selected images?"
-                detail="Selected images, their sidecar caption files, and metadata will be permanently deleted."
-                confirmLabel="Delete selected"
-                onConfirm={() => removeImages.mutate()}
-                disabled={removeImages.isPending}
-              />
+        {(enqueueTraining.isSuccess || selectedIds.size > 0) && (
+          <section className="actionbar mt-4">
+            <div className="text-xs text-slate-500">
+              {enqueueTraining.isSuccess
+                ? "Training added to queue"
+                : `${selectedIds.size} images selected`}
             </div>
-          )}
-        </section>
+            {selectedIds.size > 0 && (
+              <div className="flex items-center gap-2">
+                <ConfirmAction
+                  danger
+                  label={`Delete ${selectedIds.size} selected`}
+                  title="Delete selected images?"
+                  detail="Selected images, their sidecar caption files, and metadata will be permanently deleted."
+                  confirmLabel="Delete selected"
+                  onConfirm={() => removeImages.mutate()}
+                  disabled={removeImages.isPending}
+                />
+              </div>
+            )}
+          </section>
+        )}
         <section className="dataset-gallery">
           {data.images.map((image, index) => (
             <div
