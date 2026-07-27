@@ -61,7 +61,8 @@ loop: with the default batch size of one, `steps / image count` is approximately
 how many times each image is presented. Smaller datasets receive more
 presentations per image, larger datasets fewer, and the UI shows this estimate
 instead of treating a fixed step count as universally valid. The short setup
-check is intended only to verify the environment and output path.
+test run is intended only to verify training and output, not to produce the
+final model.
 
 ## Use the exported LoRA
 

@@ -691,13 +691,13 @@ function TrainingPlan({
               onClick={() => applyPreset("quick")}
             >
               <span className="block text-xs font-semibold text-olive-800">
-                Setup check
+                Test run
               </span>
               <span className="mt-1 block text-[10px] text-olive-500">
                 {quick.resolution}px · R{quick.rank} · {quick.steps} steps
               </span>
               <span className="mt-1 block text-[9px] text-olive-500">
-                ≈ {quick.exposures_per_image}× per image
+                Verify training and output · ≈ {quick.exposures_per_image}×
               </span>
             </button>
           </div>
