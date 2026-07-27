@@ -1,8 +1,8 @@
 # Z-Image Turbo LoRA Trainer
 
-A focused local trainer for `Tongyi-MAI/Z-Image-Turbo`. It deliberately has no
-UI, job database, or multi-model abstraction: a captioned image folder in,
-one portable LoRA file out.
+A focused local trainer for `Tongyi-MAI/Z-Image-Turbo`, with a CLI and local
+web dashboard. Give it a captioned image folder and it produces one portable
+LoRA file.
 
 Images use aspect-ratio buckets by default: the trainer selects the nearest
 square, 4:3, 3:4, 3:2, 2:3, 16:9, or 9:16 bucket at approximately the chosen
@@ -15,6 +15,23 @@ Z-Image Turbo is a distilled inference model. Before adding the user LoRA, the
 trainer merges Ostris's public Turbo training adapter into the Transformer. The
 adapter is never included in the output. Thus the exported LoRA is applied to
 the original `Tongyi-MAI/Z-Image-Turbo` at inference time.
+
+## Windows quick start
+
+The Windows setup is intentionally split into two double-click steps:
+
+1. Download or clone this repository, then double-click
+   [install.bat](install.bat). It installs `uv` and Node.js LTS if they are
+   missing, then installs the Python, launcher, and web dependencies. Keep the
+   window open until it reports that installation is complete. The first run
+   can take several minutes and requires an internet connection.
+2. For everyday use, double-click [start-dev.bat](start-dev.bat), then open
+   http://localhost:5173 in your browser. Leave its terminal window open while
+   using the app; press `Ctrl+C` there to stop it.
+
+The installer needs Windows 10/11 with `winget` (included with current
+versions of Windows). Training requires a compatible NVIDIA GPU and CUDA
+driver; starting the local UI itself does not download the base model.
 
 ## Train
 
@@ -55,9 +72,10 @@ Start both services together from the project root:
 corepack pnpm dev
 ```
 
-On Windows, you can instead double-click [start-dev.bat](start-dev.bat). It
-launches the same development command in a terminal window; it does not build
-the frontend. Vite hot-reloads UI changes, while Uvicorn reloads the FastAPI
+On Windows, run [install.bat](install.bat) once, then double-click
+[start-dev.bat](start-dev.bat) whenever you want to use the app. It launches
+the same development command in a terminal window; it does not build the
+frontend. Vite hot-reloads UI changes, while Uvicorn reloads the FastAPI
 server when Python files change.
 
 The command uses `concurrently` to run FastAPI and Vite together. It binds to
