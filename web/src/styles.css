@@ -36,8 +36,15 @@
   .app-content > a:first-child + header ~ div > section:nth-child(3) { display:none; }
   @media (min-width: 1280px) {
     .app-content:has(> a:first-child + header) { --training-aside:clamp(340px, 30vw, 440px); position:relative; padding-right:calc(var(--training-aside) + 24px); }
-    .app-content:has(> a:first-child + header) > div.mt-4.grid { grid-template-columns:minmax(0, 1fr); }
-    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(4) { position:absolute; top:126px; right:28px; width:var(--training-aside); }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid { grid-template-columns:180px minmax(0, 1fr); gap:0; overflow:hidden; border:1px solid rgba(203,213,225,.9); border-radius:16px; background:rgba(255,255,255,.94); box-shadow:0 10px 28px rgba(15,23,42,.055),0 1px 2px rgba(15,23,42,.04); }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1), .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(2) { min-height:112px; border:0; border-radius:0; background:transparent; padding:14px 16px; box-shadow:none; }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1) { border-right:1px solid #e2e8f0; }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1) > h3 + p { display:none; }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(1) > button { margin-top:10px; }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(2) > h3 + p { margin-top:3px; }
+    .app-content:has(> a:first-child + header) > div.mt-4.grid > section:nth-child(4) { position:absolute; top:126px; right:28px; width:var(--training-aside); min-height:calc(100vh - 150px); }
+    .app-content:has(> a:first-child + header) > section.mt-4.grid { grid-template-columns:repeat(4, minmax(0, 1fr)); }
+    .app-content:has(> a:first-child + header) > section.mt-4.grid > div > button > p { display:none !important; }
   }
   .panel { border:1px solid rgba(203,213,225,.9); border-radius:16px; background:rgba(255,255,255,.94); padding:16px; box-shadow:0 10px 28px rgba(15,23,42,.055),0 1px 2px rgba(15,23,42,.04); }
   .actionbar { display:flex; align-items:center; justify-content:space-between; border:1px solid rgba(203,213,225,.9); border-radius:16px; background:rgba(255,255,255,.94); padding:12px 14px; box-shadow:0 6px 20px rgba(15,23,42,.04); }
