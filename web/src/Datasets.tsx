@@ -649,7 +649,7 @@ function TrainingPlan({
           onClick={() => setPanelTab("validation")}
         >
           Validation
-          {validationSamples.length > 1 && (
+          {params.sampleEnabled && (
             <span className="training-tab-count">
               {validationSamples.length}
             </span>
@@ -782,20 +782,22 @@ function TrainingPlan({
         </>
       ) : (
         <section className="training-validation">
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center justify-between gap-4">
             <h4 className="training-form-title">Validation images</h4>
-            <label
-              className="training-toggle"
-              title="Generate validation images"
-            >
+            <label className="validation-switch">
+              <span>{params.sampleEnabled ? "On" : "Off"}</span>
               <input
                 type="checkbox"
                 aria-label="Generate validation images"
                 checked={!!params.sampleEnabled}
-                onChange={(e) =>
-                  setParams({ ...params, sampleEnabled: e.target.checked })
+                onChange={(event) =>
+                  setParams({
+                    ...params,
+                    sampleEnabled: event.target.checked,
+                  })
                 }
               />
+              <i aria-hidden="true" />
             </label>
           </div>
           {params.sampleEnabled && (
@@ -818,56 +820,58 @@ function TrainingPlan({
               <div className="training-prompt-list">
                 {validationSamples.map((sample, index) => (
                   <div className="training-prompt-item" key={index}>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="validation-prompt-header">
                       <span>Prompt {index + 1}</span>
-                      {validationSamples.length > 1 && (
-                        <button
-                          type="button"
-                          className="validation-prompt-remove"
-                          aria-label={`Remove validation prompt ${index + 1}`}
-                          title="Remove prompt"
-                          onClick={() =>
-                            setParams({
-                              ...params,
-                              validationSamples: validationSamples.filter(
-                                (_, sampleIndex) => sampleIndex !== index,
-                              ),
-                            })
+                      <div className="validation-prompt-actions">
+                        <ValidationResolutionMenu
+                          sample={sample}
+                          index={index}
+                          onChange={(changes) =>
+                            updateValidationSample(index, changes)
                           }
-                        >
-                          <svg
-                            aria-hidden="true"
-                            viewBox="0 0 16 16"
-                            width="14"
-                            height="14"
+                        />
+                        {validationSamples.length > 1 && (
+                          <button
+                            type="button"
+                            className="validation-prompt-remove"
+                            aria-label={`Remove validation prompt ${index + 1}`}
+                            title="Remove prompt"
+                            onClick={() =>
+                              setParams({
+                                ...params,
+                                validationSamples: validationSamples.filter(
+                                  (_, sampleIndex) => sampleIndex !== index,
+                                ),
+                              })
+                            }
                           >
-                            <path
-                              d="M3.5 4.5h9m-5.5-2h2l.75 2h-3.5l.75-2Zm-2 2 .5 8h5l.5-8M7 7v3m2-3v3"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth="1.25"
-                            />
-                          </svg>
-                        </button>
-                      )}
+                            <svg
+                              aria-hidden="true"
+                              viewBox="0 0 16 16"
+                              width="14"
+                              height="14"
+                            >
+                              <path
+                                d="M3.5 4.5h9m-5.5-2h2l.75 2h-3.5l.75-2Zm-2 2 .5 8h5l.5-8M7 7v3m2-3v3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth="1.25"
+                              />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
                     </div>
                     <textarea
-                      className="training-input min-h-20 resize-y p-2"
+                      className="training-input validation-prompt-input"
                       aria-label={`Validation prompt ${index + 1}`}
                       value={sample.prompt}
                       onChange={(e) =>
                         updateValidationSample(index, {
                           prompt: e.target.value,
                         })
-                      }
-                    />
-                    <ValidationResolutionMenu
-                      sample={sample}
-                      index={index}
-                      onChange={(changes) =>
-                        updateValidationSample(index, changes)
                       }
                     />
                   </div>
@@ -886,32 +890,30 @@ function TrainingPlan({
                   })
                 }
               >
-                + Add prompt
+                <span aria-hidden="true">＋</span> Add validation prompt
               </button>
             </>
           )}
         </section>
       )}
-      <button
-        className="mt-3 w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!ready || !validationReady || queuing}
-        onClick={() => onQueue(params)}
-      >
-        {queuing ? "Adding training run…" : "Start training"}
-      </button>
-      <p className="mt-2 text-[10px] text-olive-500">
-        Every start creates a separate run and output directory.
-      </p>
-      {!ready && (
-        <p className="mt-2 text-[11px] text-amber-700">
-          Add images and make sure each image has a caption before training.
-        </p>
-      )}
-      {!validationReady && (
-        <p className="mt-2 text-[11px] text-amber-700">
-          Add at least one validation prompt before training.
-        </p>
-      )}
+      <div className="training-panel-actions">
+        <button
+          className="w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
+          disabled={!ready || !validationReady || queuing}
+          onClick={() => onQueue(params)}
+        >
+          {queuing ? "Adding training run…" : "Start training"}
+        </button>
+        {!ready ? (
+          <p>
+            {imageCount === 0
+              ? "Add images before training."
+              : `${imageCount - captionedCount} image${imageCount - captionedCount === 1 ? "" : "s"} still need captions.`}
+          </p>
+        ) : !validationReady ? (
+          <p>Add at least one validation prompt.</p>
+        ) : null}
+      </div>
     </section>
   );
 }
