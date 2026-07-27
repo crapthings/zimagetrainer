@@ -134,8 +134,14 @@ function Layout() {
   );
 }
 
-function LossChart({ points }: { points: { step: number; loss: number }[] }) {
-  const values = points.slice(-300);
+function LossChart({
+  points,
+  total,
+}: {
+  points: { step: number; loss: number }[];
+  total: number;
+}) {
+  const values = points;
   if (values.length < 2)
     return (
       <div className="flex h-44 items-center justify-center text-xs text-olive-400">
@@ -160,8 +166,11 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
     min = Math.min(...smoothed.map((x) => x.loss)),
     max = Math.max(...smoothed.map((x) => x.loss)),
     span = Math.max(0.00001, max - min);
-  const coordinates = smoothed.map((point, index) => ({
-    x: pad + (index / (smoothed.length - 1)) * (width - pad * 2),
+  const coordinates = smoothed.map((point) => ({
+    x:
+      pad +
+      (Math.min(point.step, Math.max(1, total)) / Math.max(1, total)) *
+        (width - pad * 2),
     y: height - pad - ((point.loss - min) / span) * (height - pad * 2),
   }));
   const path = coordinates
@@ -208,11 +217,11 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
         />
       </svg>
       <div className="flex justify-between text-[10px] text-olive-400">
-        <span>step {values[0].step}</span>
+        <span>step 0</span>
         <span>
           loss {max.toFixed(4)} → {min.toFixed(4)}
         </span>
-        <span>step {values.at(-1)?.step}</span>
+        <span>step {total.toLocaleString()}</span>
       </div>
     </div>
   );
@@ -333,7 +342,7 @@ function Training() {
               </span>
             </div>
             <div className="mt-3 border-t border-olive-100 pt-3">
-              <LossChart points={points} />
+              <LossChart points={points} total={totalSteps} />
             </div>
           </section>
           <section className="panel mt-4">
@@ -843,7 +852,7 @@ function TrainingMonitor() {
                   <div className="training-section-heading">
                     <div>
                       <h3>Training loss</h3>
-                      <p>Smoothed view of the latest 300 recorded steps</p>
+                      <p>Smoothed loss across the full configured step range</p>
                     </div>
                     <span>{progress}% complete</span>
                   </div>
@@ -865,7 +874,7 @@ function TrainingMonitor() {
                       </strong>
                     </div>
                   </div>
-                  <LossChart points={points} />
+                  <LossChart points={points} total={total} />
                 </section>
               </div>
 

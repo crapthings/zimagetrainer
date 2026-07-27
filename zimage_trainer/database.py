@@ -117,7 +117,7 @@ class Database:
             "status": job["status"],
             "error": job["error"],
             "total": config.get("train", {}).get("steps", 0),
-            "losses": losses[-1000:],
+            "losses": losses[-10000:],
             "samples": samples,
             "logs": logs[-500:],
             "stage": stage,
