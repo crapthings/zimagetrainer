@@ -191,6 +191,9 @@
     margin-top: 18px;
   }
   .dataset-card {
+    display: flex;
+    aspect-ratio: 1 / 1;
+    flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--app-border);
     border-radius: 14px;
@@ -208,7 +211,8 @@
   }
   .dataset-card-cover {
     display: grid;
-    aspect-ratio: 4 / 3;
+    min-height: 0;
+    flex: 1;
     overflow: hidden;
     place-items: center;
     background: var(--color-olive-100);
@@ -225,6 +229,7 @@
     transform: scale(1.015);
   }
   .dataset-card-body {
+    flex: 0 0 auto;
     padding: 12px;
   }
   .dataset-card-body h3 {
