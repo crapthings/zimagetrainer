@@ -508,81 +508,108 @@ function TrainingPlan({
           </span>
         </button>
       </div>
-      <details className="mt-3 rounded-md border border-olive-200 bg-olive-50 p-2">
-        <summary className="cursor-pointer text-xs font-semibold text-olive-700">
-          Advanced options
-        </summary>
-        <div className="mt-2 grid grid-cols-3 gap-2">
-          <label>
-            Resolution
-            <input
-              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
-              type="number"
-              value={params.resolution}
-              onChange={(e) =>
-                setParams({ ...params, resolution: +e.target.value })
-              }
-            />
-          </label>
-          <label>
-            Rank
-            <input
-              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
-              type="number"
-              value={params.rank}
-              onChange={(e) => setParams({ ...params, rank: +e.target.value })}
-            />
-          </label>
-          <label>
-            Steps
-            <input
-              className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
-              type="number"
-              value={params.steps}
-              onChange={(e) => setParams({ ...params, steps: +e.target.value })}
-            />
-          </label>
-        </div>
-        <label className="mt-3 flex items-center gap-2 !m-0 text-xs font-semibold text-olive-700">
-          <input
-            type="checkbox"
-            checked={!!params.sampleEnabled}
-            onChange={(e) =>
-              setParams({ ...params, sampleEnabled: e.target.checked })
-            }
-          />{" "}
-          Generate validation images
-        </label>
-        {params.sampleEnabled && (
-          <>
-            <label>
-              Every N steps
-              <input
-                className="mt-1 w-full rounded-md border border-olive-200 bg-white px-2 py-1 text-xs"
-                type="number"
-                min="1"
-                value={params.sampleEvery}
-                onChange={(e) =>
-                  setParams({ ...params, sampleEvery: +e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Test prompt
-              <textarea
-                className="mt-1 min-h-20 w-full rounded-md border border-olive-200 bg-white p-2 text-xs"
-                value={params.samplePrompt}
-                onChange={(e) =>
-                  setParams({ ...params, samplePrompt: e.target.value })
-                }
-              />
-            </label>
-            <p className="mt-1 text-[10px] text-olive-500">
-              {suggestion?.sample_prompt_reason}
+      <div className="training-form">
+        <section className="training-form-group">
+          <div>
+            <h4 className="training-form-title">Training parameters</h4>
+            <p className="training-form-description">
+              Model size, output resolution, and run length.
             </p>
-          </>
-        )}
-      </details>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            <label>
+              Resolution
+              <input
+                className="training-input"
+                type="number"
+                value={params.resolution}
+                onChange={(e) =>
+                  setParams({ ...params, resolution: +e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Rank
+              <input
+                className="training-input"
+                type="number"
+                value={params.rank}
+                onChange={(e) =>
+                  setParams({ ...params, rank: +e.target.value })
+                }
+              />
+            </label>
+            <label>
+              Steps
+              <input
+                className="training-input"
+                type="number"
+                value={params.steps}
+                onChange={(e) =>
+                  setParams({ ...params, steps: +e.target.value })
+                }
+              />
+            </label>
+          </div>
+        </section>
+
+        <div className="training-form-divider" role="separator" />
+
+        <section className="training-form-group">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h4 className="training-form-title">Validation images</h4>
+              <p className="training-form-description">
+                Generate consistent previews during training.
+              </p>
+            </div>
+            <label className="training-toggle">
+              <input
+                type="checkbox"
+                checked={!!params.sampleEnabled}
+                onChange={(e) =>
+                  setParams({ ...params, sampleEnabled: e.target.checked })
+                }
+              />
+              Enable
+            </label>
+          </div>
+          {params.sampleEnabled && (
+            <div className="mt-3 grid gap-3">
+              <label>
+                Generate every
+                <div className="training-input-suffix">
+                  <input
+                    className="training-input"
+                    type="number"
+                    min="1"
+                    value={params.sampleEvery}
+                    onChange={(e) =>
+                      setParams({ ...params, sampleEvery: +e.target.value })
+                    }
+                  />
+                  <span>steps</span>
+                </div>
+              </label>
+              <label>
+                Validation prompt
+                <textarea
+                  className="training-input min-h-20 resize-y p-2"
+                  value={params.samplePrompt}
+                  onChange={(e) =>
+                    setParams({ ...params, samplePrompt: e.target.value })
+                  }
+                />
+              </label>
+              {suggestion?.sample_prompt_reason && (
+                <p className="text-[10px] leading-relaxed text-olive-500">
+                  {suggestion.sample_prompt_reason}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
       <button
         className="mt-3 w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
         disabled={!ready || queuing}
