@@ -10,6 +10,7 @@ import {
 import { useStore } from "./store";
 import { DatasetDetail, DatasetList } from "./Datasets";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { GlobalErrorNotice } from "./GlobalErrorNotice";
 
 export const API = "";
 const field =
@@ -532,16 +533,22 @@ function Settings() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/datasets" element={<DatasetList />} />
-        <Route path="/datasets/:id" element={<DatasetDetail />} />
-        <Route path="/dataset" element={<Navigate to="/datasets" replace />} />
-        <Route path="/jobs" element={<Jobs />} />
-        <Route path="/settings" element={<Settings />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Route>
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<Layout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/datasets" element={<DatasetList />} />
+          <Route path="/datasets/:id" element={<DatasetDetail />} />
+          <Route
+            path="/dataset"
+            element={<Navigate to="/datasets" replace />}
+          />
+          <Route path="/jobs" element={<Jobs />} />
+          <Route path="/settings" element={<Settings />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Routes>
+      <GlobalErrorNotice />
+    </>
   );
 }

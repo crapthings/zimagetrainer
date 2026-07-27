@@ -15,6 +15,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { captionModels } from "./ModelSelect";
+import { FriendlyError } from "./errors";
 import { useStore } from "./store";
 
 const API = "";
@@ -1073,6 +1074,26 @@ export function DatasetDetail() {
         }),
       });
       if (!r.ok) throw new Error("Captioning could not start");
+      const result = (await r.json()) as {
+        updated: number;
+        errors: { error: string }[];
+      };
+      if (result.errors.length) {
+        const detail = result.errors[0]?.error ?? "";
+        if (detail.includes("GEMINI_API_KEY")) {
+          throw new FriendlyError(
+            "Gemini API key required",
+            "Add your Google AI Studio key before generating captions.",
+            { label: "Open Settings", path: "/settings" },
+          );
+        }
+        throw new FriendlyError(
+          result.updated ? "Some captions failed" : "Captioning failed",
+          result.updated
+            ? `${result.updated} completed, ${result.errors.length} failed. ${detail}`
+            : detail || "No captions were generated. Please try again.",
+        );
+      }
     },
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
