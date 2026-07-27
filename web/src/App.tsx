@@ -94,7 +94,6 @@ function Layout() {
     <main className="app-shell">
       <aside className="app-sidebar">
         <div className="app-brand">
-          <span className="app-brand-mark">Z</span>
           <h1>Z-Forge</h1>
         </div>
         <nav className="mt-8 grid gap-1">
