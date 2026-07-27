@@ -785,7 +785,6 @@ function TrainingPlan({
           <div className="flex items-center justify-between gap-4">
             <h4 className="training-form-title">Validation images</h4>
             <label className="validation-switch">
-              <span>{params.sampleEnabled ? "On" : "Off"}</span>
               <input
                 type="checkbox"
                 aria-label="Generate validation images"

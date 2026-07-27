@@ -545,10 +545,6 @@
   .validation-switch {
     display: inline-flex;
     align-items: center;
-    gap: 7px;
-    color: var(--color-olive-500);
-    font-size: 10px;
-    font-weight: 700;
     cursor: pointer;
   }
   .validation-switch input {
@@ -558,11 +554,14 @@
   }
   .validation-switch i {
     position: relative;
-    width: 28px;
-    height: 16px;
+    width: 32px;
+    height: 18px;
+    border: 1px solid var(--color-olive-300);
     border-radius: 999px;
-    background: var(--color-olive-200);
-    transition: background 0.16s ease;
+    background: var(--color-olive-100);
+    transition:
+      border-color 0.16s ease,
+      background 0.16s ease;
   }
   .validation-switch i::after {
     position: absolute;
@@ -577,10 +576,11 @@
     transition: transform 0.16s ease;
   }
   .validation-switch input:checked + i {
+    border-color: var(--color-olive-600);
     background: var(--color-olive-600);
   }
   .validation-switch input:checked + i::after {
-    transform: translateX(12px);
+    transform: translateX(14px);
   }
   .validation-switch input:focus-visible + i {
     outline: 2px solid var(--color-olive-300);
