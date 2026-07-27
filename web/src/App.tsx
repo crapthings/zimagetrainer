@@ -527,6 +527,7 @@ function eventPresentation(event: TimelineEvent) {
 function TrainingMonitor() {
   const s = useStore();
   const [selectedId, setSelectedId] = useState<string>();
+  const [view, setView] = useState<"monitor" | "raw">("monitor");
   const { data = { jobs: {} } } = useQuery({
     queryKey: ["jobs"],
     queryFn: async () => {
@@ -620,151 +621,182 @@ function TrainingMonitor() {
         </div>
       ) : (
         <div className="training-monitor">
-          <section className="training-statusbar">
-            <div className="training-run-status">
-              <span className={`run-status-dot run-status-${status}`} />
-              <strong className="capitalize">{status}</strong>
-              <code>{activeId}</code>
-            </div>
-            <span>
-              {["running", "sampling"].includes(status) && stage
-                ? stageLabels[stage] ?? stage
-                : selectedJob?.error ?? "Run output is up to date"}
-            </span>
-          </section>
+          <nav className="training-view-tabs" aria-label="Training view">
+            <button
+              className={view === "monitor" ? "training-view-tab-active" : ""}
+              onClick={() => setView("monitor")}
+            >
+              Monitor
+            </button>
+            <button
+              className={view === "raw" ? "training-view-tab-active" : ""}
+              onClick={() => setView("raw")}
+            >
+              Raw output
+              <span>{logLines.length}</span>
+            </button>
+          </nav>
 
-          <section className="training-metrics">
-            <div className="training-progress-metric">
-              <div>
-                <span>Progress</span>
-                <strong>{progress}%</strong>
-              </div>
-              <div className="training-progress-track">
-                <i style={{ width: `${progress}%` }} />
-              </div>
-            </div>
-            <div>
-              <span>Step</span>
-              <strong>
-                {step.toLocaleString()}
-                <small> / {total.toLocaleString()}</small>
-              </strong>
-            </div>
-            <div>
-              <span>Current loss</span>
-              <strong>{loss?.toFixed(5) ?? "—"}</strong>
-            </div>
-            <div>
-              <span>Recent trend</span>
-              <strong className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}>
-                {lossTrend}
-              </strong>
-            </div>
-          </section>
-
-          <section className="training-chart">
-            <div className="training-section-heading">
-              <div>
-                <h3>Training loss</h3>
-                <p>Latest 300 recorded steps</p>
-              </div>
-              {latest && (
+          {view === "monitor" ? (
+            <>
+              <section className="training-statusbar">
+                <div className="training-run-status">
+                  <span className={`run-status-dot run-status-${status}`} />
+                  <strong className="capitalize">{status}</strong>
+                  <code>{activeId}</code>
+                </div>
                 <span>
-                  Step {latest.step.toLocaleString()} · {latest.loss.toFixed(5)}
+                  {["running", "sampling"].includes(status) && stage
+                    ? stageLabels[stage] ?? stage
+                    : selectedJob?.error ?? "Run output is up to date"}
                 </span>
-              )}
-            </div>
-            <LossChart points={points} />
-          </section>
+              </section>
 
-          <div className="training-insights">
-            <section className="training-events">
+              <section className="training-metrics">
+                <div className="training-progress-metric">
+                  <div>
+                    <span>Progress</span>
+                    <strong>{progress}%</strong>
+                  </div>
+                  <div className="training-progress-track">
+                    <i style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
+                <div>
+                  <span>Step</span>
+                  <strong>
+                    {step.toLocaleString()}
+                    <small> / {total.toLocaleString()}</small>
+                  </strong>
+                </div>
+                <div>
+                  <span>Current loss</span>
+                  <strong>{loss?.toFixed(5) ?? "—"}</strong>
+                </div>
+                <div>
+                  <span>Recent trend</span>
+                  <strong
+                    className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
+                  >
+                    {lossTrend}
+                  </strong>
+                </div>
+              </section>
+
+              <section className="training-chart">
+                <div className="training-section-heading">
+                  <div>
+                    <h3>Training loss</h3>
+                    <p>Latest 300 recorded steps</p>
+                  </div>
+                  {latest && (
+                    <span>
+                      Step {latest.step.toLocaleString()} ·{" "}
+                      {latest.loss.toFixed(5)}
+                    </span>
+                  )}
+                </div>
+                <LossChart points={points} />
+              </section>
+
+              <div className="training-insights">
+                <section className="training-events">
+                  <div className="training-section-heading">
+                    <div>
+                      <h3>Important events</h3>
+                      <p>Readable milestones from the training process</p>
+                    </div>
+                  </div>
+                  {timeline.length ? (
+                    <ol className="training-event-list">
+                      {timeline
+                        .filter(
+                          (event, index, all) =>
+                            event.type !== "stage" ||
+                            !all.slice(index + 1).some(
+                              (candidate: TimelineEvent) =>
+                                candidate.type === "stage" &&
+                                candidate.stage === event.stage,
+                            ),
+                        )
+                        .slice(-12)
+                        .reverse()
+                        .map((event, index) => {
+                          const item = eventPresentation(event);
+                          return (
+                            <li key={`${event.created_at}-${index}`}>
+                              <span
+                                className={`event-icon event-icon-${item.tone}`}
+                              >
+                                {item.icon}
+                              </span>
+                              <div>
+                                <strong>{item.title}</strong>
+                                {item.detail && <p>{item.detail}</p>}
+                              </div>
+                              <time>
+                                {new Date(
+                                  `${event.created_at}Z`,
+                                ).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </time>
+                            </li>
+                          );
+                        })}
+                    </ol>
+                  ) : (
+                    <p className="training-section-empty">
+                      Events will appear as the run prepares, saves checkpoints,
+                      and generates validation images.
+                    </p>
+                  )}
+                </section>
+
+                <section className="training-validation">
+                  <div className="training-section-heading">
+                    <div>
+                      <h3>Validation images</h3>
+                      <p>Compare generated samples across checkpoints</p>
+                    </div>
+                    <span>{samples.length}</span>
+                  </div>
+                  {samples.length ? (
+                    <div className="training-sample-grid">
+                      {samples.slice(-8).map((path: string) => (
+                        <a
+                          key={path}
+                          href={`${API}/files/${path}`}
+                          target="_blank"
+                        >
+                          <img src={`${API}/files/${path}`} alt="" />
+                          <span>{path.split("/").at(-1)}</span>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="training-section-empty">
+                      Generated validation images will appear here.
+                    </p>
+                  )}
+                </section>
+              </div>
+            </>
+          ) : (
+            <section className="training-output training-output-tab">
               <div className="training-section-heading">
                 <div>
-                  <h3>Important events</h3>
-                  <p>Readable milestones from the training process</p>
+                  <h3>Raw output</h3>
+                  <p>Original command-line output for diagnosis and detail</p>
                 </div>
+                <span>{logLines.length} lines</span>
               </div>
-              {timeline.length ? (
-                <ol className="training-event-list">
-                  {timeline
-                    .filter(
-                      (event, index, all) =>
-                        event.type !== "stage" ||
-                        !all.slice(index + 1).some(
-                          (candidate: TimelineEvent) =>
-                            candidate.type === "stage" &&
-                            candidate.stage === event.stage,
-                        ),
-                    )
-                    .slice(-12)
-                    .reverse()
-                    .map((event, index) => {
-                      const item = eventPresentation(event);
-                      return (
-                        <li key={`${event.created_at}-${index}`}>
-                          <span className={`event-icon event-icon-${item.tone}`}>
-                            {item.icon}
-                          </span>
-                          <div>
-                            <strong>{item.title}</strong>
-                            {item.detail && <p>{item.detail}</p>}
-                          </div>
-                          <time>
-                            {new Date(`${event.created_at}Z`).toLocaleTimeString(
-                              [],
-                              { hour: "2-digit", minute: "2-digit" },
-                            )}
-                          </time>
-                        </li>
-                      );
-                    })}
-                </ol>
-              ) : (
-                <p className="training-section-empty">
-                  Events will appear as the run prepares, saves checkpoints, and
-                  generates validation images.
-                </p>
-              )}
+              <pre>
+                {logLines.join("\n") || "No output was captured for this run."}
+              </pre>
             </section>
-
-            <section className="training-validation">
-              <div className="training-section-heading">
-                <div>
-                  <h3>Validation images</h3>
-                  <p>Compare generated samples across checkpoints</p>
-                </div>
-                <span>{samples.length}</span>
-              </div>
-              {samples.length ? (
-                <div className="training-sample-grid">
-                  {samples.slice(-8).map((path: string) => (
-                    <a key={path} href={`${API}/files/${path}`} target="_blank">
-                      <img src={`${API}/files/${path}`} alt="" />
-                      <span>{path.split("/").at(-1)}</span>
-                    </a>
-                  ))}
-                </div>
-              ) : (
-                <p className="training-section-empty">
-                  Generated validation images will appear here.
-                </p>
-              )}
-            </section>
-          </div>
-
-          <section className="training-output">
-            <div className="training-section-heading">
-              <div>
-                <h3>Raw output</h3>
-                <p>Original command-line output for diagnosis and detail</p>
-              </div>
-              <span>{logLines.length} lines</span>
-            </div>
-            <pre>
-              {logLines.join("\n") || "No output was captured for this run."}
-            </pre>
-          </section>
+          )}
         </div>
       )}
     </>
