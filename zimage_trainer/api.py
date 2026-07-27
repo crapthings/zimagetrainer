@@ -414,10 +414,18 @@ async def job_monitor(job_id: str) -> dict[str, Any]:
 @app.post("/api/train")
 async def start_training(request: TrainRequest) -> dict[str, str]:
     job_id = uuid.uuid4().hex[:8]
+    config = json.loads(json.dumps(request.config))
+    folder = config.get("data", {}).get("folder")
+    dataset = database.dataset_for_folder(folder) if isinstance(folder, str) else None
+    if dataset:
+        train = config.setdefault("train", {})
+        if not isinstance(train, dict):
+            raise HTTPException(422, "Training configuration must contain a train object")
+        train["output_dir"] = f"outputs/{dataset['id']}/{job_id}_lora"
     config_path = JOBS_DIR / f"{job_id}.yaml"
-    config_path.write_text(yaml.safe_dump(request.config, sort_keys=False), encoding="utf-8")
+    config_path.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     hub.jobs[job_id] = {"status": "queued", "config": str(config_path.relative_to(ROOT))}
-    database.create_job(job_id, request.config, str(config_path.relative_to(ROOT)))
+    database.create_job(job_id, config, str(config_path.relative_to(ROOT)))
     await training_queue.put((job_id, config_path))
     return {"job_id": job_id}
 

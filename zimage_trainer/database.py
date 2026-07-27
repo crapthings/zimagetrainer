@@ -158,6 +158,11 @@ class Database:
                 FROM datasets d LEFT JOIN images i ON i.dataset_id = d.id WHERE d.id = ? GROUP BY d.id""", (dataset_id,)).fetchone()
         return dict(row) if row else None
 
+    def dataset_for_folder(self, folder: str) -> dict[str, Any] | None:
+        with self.lock:
+            row = self.connection.execute("SELECT * FROM datasets WHERE folder = ?", (folder,)).fetchone()
+        return dict(row) if row else None
+
     def images(self, dataset_id: str) -> list[dict[str, Any]]:
         with self.lock:
             rows = self.connection.execute("SELECT * FROM images WHERE dataset_id = ? ORDER BY created_at DESC", (dataset_id,)).fetchall()
