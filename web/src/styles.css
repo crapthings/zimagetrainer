@@ -1137,8 +1137,8 @@
   }
   .training-monitor {
     display: grid;
-    gap: 14px;
-    margin-top: 20px;
+    gap: 10px;
+    margin-top: 16px;
   }
   .training-view-tabs {
     display: flex;
@@ -1150,7 +1150,7 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    padding: 0 2px 10px;
+    padding: 0 2px 8px;
     color: var(--color-olive-500);
     font-size: 11px;
     font-weight: 650;
@@ -1184,12 +1184,12 @@
   }
   .training-statusbar {
     display: flex;
-    min-height: 36px;
+    min-height: 28px;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--color-olive-200);
-    padding: 0 2px 10px;
+    padding: 0 2px 6px;
     color: var(--color-olive-500);
     font-size: 11px;
   }
