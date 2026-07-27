@@ -36,6 +36,40 @@ type ValidationSample = {
   width: number;
   height: number;
 };
+type ValidationResolutionOption = {
+  ratio?: string;
+  width: number;
+  height: number;
+};
+const validationResolutionGroups: {
+  label: string;
+  options: ValidationResolutionOption[];
+}[] = [
+  {
+    label: "Square · 1:1",
+    options: [
+      { width: 512, height: 512 },
+      { width: 768, height: 768 },
+      { width: 1024, height: 1024 },
+    ],
+  },
+  {
+    label: "Landscape",
+    options: [
+      { ratio: "4:3", width: 896, height: 672 },
+      { ratio: "3:2", width: 960, height: 640 },
+      { ratio: "16:9", width: 1024, height: 576 },
+    ],
+  },
+  {
+    label: "Portrait",
+    options: [
+      { ratio: "3:4", width: 672, height: 896 },
+      { ratio: "2:3", width: 640, height: 960 },
+      { ratio: "9:16", width: 576, height: 1024 },
+    ],
+  },
+];
 type TrainingParams = {
   resolution: number;
   rank: number;
@@ -56,6 +90,106 @@ type Suggestion = {
   sample_prompt_reason?: string;
   reason: string;
 };
+
+function ValidationResolutionMenu({
+  sample,
+  index,
+  onChange,
+}: {
+  sample: ValidationSample;
+  index: number;
+  onChange: (changes: Partial<ValidationSample>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = validationResolutionGroups
+    .flatMap((group) => group.options)
+    .find(
+      (option) =>
+        option.width === sample.width && option.height === sample.height,
+    );
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: "bottom-start",
+    middleware: [offset(5), flip(), shift({ padding: 12 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    useClick(context),
+    useDismiss(context),
+    useRole(context, { role: "menu" }),
+  ]);
+
+  return (
+    <>
+      <button
+        ref={refs.setReference}
+        type="button"
+        className="validation-resolution-trigger"
+        aria-label={`Validation resolution ${index + 1}`}
+        {...getReferenceProps()}
+      >
+        <span>
+          {selected && "ratio" in selected ? selected.ratio : "1:1"} ·{" "}
+          {sample.width} × {sample.height}
+        </span>
+        <svg aria-hidden="true" viewBox="0 0 16 16" width="14" height="14">
+          <path
+            d="m4 6 4 4 4-4"
+            fill="none"
+            stroke="currentColor"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="1.75"
+          />
+        </svg>
+      </button>
+      {open && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="validation-resolution-menu"
+            {...getFloatingProps()}
+          >
+            {validationResolutionGroups.map((group) => (
+              <div className="validation-resolution-group" key={group.label}>
+                <p>{group.label}</p>
+                {group.options.map((option) => {
+                  const active =
+                    option.width === sample.width &&
+                    option.height === sample.height;
+                  return (
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={active}
+                      className={active ? "is-active" : ""}
+                      key={`${option.width}x${option.height}`}
+                      onClick={() => {
+                        onChange({
+                          width: option.width,
+                          height: option.height,
+                        });
+                        setOpen(false);
+                      }}
+                    >
+                      <span>{"ratio" in option ? option.ratio : "1:1"}</span>
+                      <span>
+                        {option.width} × {option.height}
+                      </span>
+                      {active && <span aria-hidden="true">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </FloatingPortal>
+      )}
+    </>
+  );
+}
 const getDatasets = async (): Promise<Dataset[]> =>
   (await fetch(`${API}/api/datasets`)).json().then((x) => x.datasets);
 const getDataset = async (
@@ -647,121 +781,100 @@ function TrainingPlan({
           </div>
         </>
       ) : (
-        <div className="training-form">
-          <section className="training-form-group">
-            <div className="flex items-start justify-between gap-4">
-              <h4 className="training-form-title">Validation images</h4>
-              <label
-                className="training-toggle"
-                title="Generate validation images"
-              >
-                <input
-                  type="checkbox"
-                  aria-label="Generate validation images"
-                  checked={!!params.sampleEnabled}
-                  onChange={(e) =>
-                    setParams({ ...params, sampleEnabled: e.target.checked })
-                  }
-                />
+        <section className="training-validation">
+          <div className="flex items-start justify-between gap-4">
+            <h4 className="training-form-title">Validation images</h4>
+            <label
+              className="training-toggle"
+              title="Generate validation images"
+            >
+              <input
+                type="checkbox"
+                aria-label="Generate validation images"
+                checked={!!params.sampleEnabled}
+                onChange={(e) =>
+                  setParams({ ...params, sampleEnabled: e.target.checked })
+                }
+              />
+            </label>
+          </div>
+          {params.sampleEnabled && (
+            <>
+              <label className="validation-frequency">
+                Generate every
+                <div className="training-input-suffix">
+                  <input
+                    className="training-input"
+                    type="number"
+                    min="1"
+                    value={params.sampleEvery}
+                    onChange={(e) =>
+                      setParams({ ...params, sampleEvery: +e.target.value })
+                    }
+                  />
+                  <span>steps</span>
+                </div>
               </label>
-            </div>
-            {params.sampleEnabled && (
-              <div className="mt-3 grid gap-3">
-                <div>
-                  <label>
-                    Generate every
-                    <div className="training-input-suffix">
-                      <input
-                        className="training-input"
-                        type="number"
-                        min="1"
-                        value={params.sampleEvery}
-                        onChange={(e) =>
-                          setParams({ ...params, sampleEvery: +e.target.value })
-                        }
-                      />
-                      <span>steps</span>
-                    </div>
-                  </label>
-                </div>
-                <div className="training-prompt-list">
-                  {validationSamples.map((sample, index) => (
-                    <div className="training-prompt-item" key={index}>
-                      <div className="flex items-center justify-between gap-2">
-                        <span>Prompt {index + 1}</span>
-                        {validationSamples.length > 1 && (
-                          <button
-                            type="button"
-                            aria-label={`Remove validation prompt ${index + 1}`}
-                            onClick={() =>
-                              setParams({
-                                ...params,
-                                validationSamples: validationSamples.filter(
-                                  (_, sampleIndex) => sampleIndex !== index,
-                                ),
-                              })
-                            }
-                          >
-                            Remove
-                          </button>
-                        )}
-                      </div>
-                      <textarea
-                        className="training-input min-h-20 resize-y p-2"
-                        aria-label={`Validation prompt ${index + 1}`}
-                        value={sample.prompt}
-                        onChange={(e) =>
-                          updateValidationSample(index, {
-                            prompt: e.target.value,
-                          })
-                        }
-                      />
-                      <label>
-                        Aspect ratio and resolution
-                        <select
-                          className="training-input"
-                          aria-label={`Validation resolution ${index + 1}`}
-                          value={`${sample.width}x${sample.height}`}
-                          onChange={(e) => {
-                            const [width, height] = e.target.value
-                              .split("x")
-                              .map(Number);
-                            updateValidationSample(index, { width, height });
-                          }}
+              <div className="training-prompt-list">
+                {validationSamples.map((sample, index) => (
+                  <div className="training-prompt-item" key={index}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span>Prompt {index + 1}</span>
+                      {validationSamples.length > 1 && (
+                        <button
+                          type="button"
+                          aria-label={`Remove validation prompt ${index + 1}`}
+                          onClick={() =>
+                            setParams({
+                              ...params,
+                              validationSamples: validationSamples.filter(
+                                (_, sampleIndex) => sampleIndex !== index,
+                              ),
+                            })
+                          }
                         >
-                          <option value="512x512">1:1 · 512 × 512</option>
-                          <option value="768x768">1:1 · 768 × 768</option>
-                          <option value="1024x1024">1:1 · 1024 × 1024</option>
-                          <option value="896x672">4:3 · 896 × 672</option>
-                          <option value="672x896">3:4 · 672 × 896</option>
-                          <option value="960x640">3:2 · 960 × 640</option>
-                          <option value="640x960">2:3 · 640 × 960</option>
-                          <option value="1024x576">16:9 · 1024 × 576</option>
-                          <option value="576x1024">9:16 · 576 × 1024</option>
-                        </select>
-                      </label>
+                          Remove
+                        </button>
+                      )}
                     </div>
-                  ))}
-                </div>
-                <button
-                  type="button"
-                  className="training-add-prompt"
-                  onClick={() =>
-                    setParams({
-                      ...params,
-                      validationSamples: [
-                        ...validationSamples,
-                        { prompt: "", width: 768, height: 768 },
-                      ],
-                    })
-                  }
-                >
-                  + Add prompt
-                </button>
+                    <textarea
+                      className="training-input min-h-20 resize-y p-2"
+                      aria-label={`Validation prompt ${index + 1}`}
+                      value={sample.prompt}
+                      onChange={(e) =>
+                        updateValidationSample(index, {
+                          prompt: e.target.value,
+                        })
+                      }
+                    />
+                    <ValidationResolutionMenu
+                      sample={sample}
+                      index={index}
+                      onChange={(changes) =>
+                        updateValidationSample(index, changes)
+                      }
+                    />
+                  </div>
+                ))}
               </div>
-            )}
-          </section>
-        </div>
+              <button
+                type="button"
+                className="training-add-prompt"
+                onClick={() =>
+                  setParams({
+                    ...params,
+                    validationSamples: [
+                      ...validationSamples,
+                      { prompt: "", width: 768, height: 768 },
+                    ],
+                  })
+                }
+              >
+                + Add prompt
+              </button>
+            </>
+          )}
+        </section>
       )}
       <button
         className="mt-3 w-full rounded-md bg-olive-600 px-3 py-2 text-xs font-semibold text-white hover:bg-olive-700 disabled:cursor-not-allowed disabled:opacity-40"
