@@ -142,17 +142,44 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
         Waiting for loss values…
       </div>
     );
+  const smoothingWindow = Math.max(
+    3,
+    Math.min(15, Math.round(values.length / 30)),
+  );
+  const smoothed = values.map((point, index) => {
+    const start = Math.max(0, index - smoothingWindow + 1);
+    const window = values.slice(start, index + 1);
+    return {
+      step: point.step,
+      loss: window.reduce((sum, item) => sum + item.loss, 0) / window.length,
+    };
+  });
   const width = 640,
     height = 176,
     pad = 16,
-    min = Math.min(...values.map((x) => x.loss)),
-    max = Math.max(...values.map((x) => x.loss)),
+    min = Math.min(...smoothed.map((x) => x.loss)),
+    max = Math.max(...smoothed.map((x) => x.loss)),
     span = Math.max(0.00001, max - min);
-  const path = values
-    .map(
-      (point, index) =>
-        `${index ? "L" : "M"} ${pad + (index / (values.length - 1)) * (width - pad * 2)} ${height - pad - ((point.loss - min) / span) * (height - pad * 2)}`,
-    )
+  const coordinates = smoothed.map((point, index) => ({
+    x: pad + (index / (smoothed.length - 1)) * (width - pad * 2),
+    y: height - pad - ((point.loss - min) / span) * (height - pad * 2),
+  }));
+  const path = coordinates
+    .slice(0, -1)
+    .map((point, index) => {
+      const previous = coordinates[index - 1] ?? point;
+      const next = coordinates[index + 1];
+      const afterNext = coordinates[index + 2] ?? next;
+      const control1 = {
+        x: point.x + (next.x - previous.x) / 6,
+        y: point.y + (next.y - previous.y) / 6,
+      };
+      const control2 = {
+        x: next.x - (afterNext.x - point.x) / 6,
+        y: next.y - (afterNext.y - point.y) / 6,
+      };
+      return `${index ? "" : `M ${point.x} ${point.y} `}C ${control1.x} ${control1.y}, ${control2.x} ${control2.y}, ${next.x} ${next.y}`;
+    })
     .join(" ");
   return (
     <div>
@@ -174,6 +201,8 @@ function LossChart({ points }: { points: { step: number; loss: number }[] }) {
           fill="none"
           stroke="var(--color-olive-700)"
           strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           vectorEffect="non-scaling-stroke"
         />
       </svg>
@@ -806,49 +835,37 @@ function TrainingMonitor() {
               </section>
 
               <div className="training-overview">
-                <section className="training-metrics">
-                  <div className="training-progress-metric">
-                    <div>
-                      <span>Progress</span>
-                      <strong>{progress}%</strong>
-                    </div>
-                    <div className="training-progress-track">
-                      <i style={{ width: `${progress}%` }} />
-                    </div>
+                <section className="training-chart training-chart-composite">
+                  <div className="training-progress-track">
+                    <i style={{ width: `${progress}%` }} />
                   </div>
-                  <div>
-                    <span>Step</span>
-                    <strong>
-                      {step.toLocaleString()}
-                      <small> / {total.toLocaleString()}</small>
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Current loss</span>
-                    <strong>{loss?.toFixed(5) ?? "—"}</strong>
-                  </div>
-                  <div>
-                    <span>Recent trend</span>
-                    <strong
-                      className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
-                    >
-                      {lossTrend}
-                    </strong>
-                  </div>
-                </section>
-
-                <section className="training-chart">
                   <div className="training-section-heading">
                     <div>
                       <h3>Training loss</h3>
-                      <p>Latest 300 recorded steps</p>
+                      <p>Smoothed view of the latest 300 recorded steps</p>
                     </div>
-                    {latest && (
-                      <span>
-                        Step {latest.step.toLocaleString()} ·{" "}
-                        {latest.loss.toFixed(5)}
-                      </span>
-                    )}
+                    <span>{progress}% complete</span>
+                  </div>
+                  <div className="training-metrics">
+                    <div>
+                      <span>Step</span>
+                      <strong>
+                        {step.toLocaleString()}
+                        <small> / {total.toLocaleString()}</small>
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Current loss</span>
+                      <strong>{loss?.toFixed(5) ?? "—"}</strong>
+                    </div>
+                    <div>
+                      <span>Recent trend</span>
+                      <strong
+                        className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
+                      >
+                        {lossTrend}
+                      </strong>
+                    </div>
                   </div>
                   <LossChart points={points} />
                 </section>

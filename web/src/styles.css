@@ -1225,20 +1225,18 @@
     background: var(--color-red-500);
   }
   .training-overview {
-    display: grid;
-    grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.55fr);
-    gap: 14px;
-    align-items: stretch;
+    min-width: 0;
   }
   .training-metrics {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
+    margin-bottom: 14px;
   }
   .training-metrics > div {
     position: relative;
     display: grid;
-    min-height: 0;
+    min-height: 74px;
     align-content: center;
     gap: 7px;
     overflow: hidden;
@@ -1262,9 +1260,6 @@
     color: var(--color-olive-400);
     font-size: 11px;
     font-weight: 500;
-  }
-  .training-progress-metric > div:first-child {
-    display: contents;
   }
   .training-progress-track {
     position: absolute;
@@ -1298,7 +1293,12 @@
   }
   .training-chart {
     display: grid;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
+  }
+  .training-chart-composite {
+    position: relative;
+    overflow: hidden;
+    padding-top: 20px;
   }
   .training-section-heading {
     display: flex;
@@ -1570,15 +1570,6 @@
   }
 }
 
-@media (max-width: 960px) {
-  .training-overview {
-    grid-template-columns: 1fr;
-  }
-  .training-metrics {
-    min-height: 170px;
-  }
-}
-
 @media (max-width: 1279px) {
   .app-content:has(.dataset-detail) {
     height: auto;
@@ -1616,7 +1607,7 @@
     min-width: 0;
   }
   .training-metrics {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
   }
   .training-sample-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
