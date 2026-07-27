@@ -176,9 +176,9 @@
     padding: 24px 28px;
   }
   .dataset-detail {
-    --dataset-aside-width: clamp(340px, 30vw, 440px);
+    --dataset-aside-width: clamp(300px, 24vw, 360px);
     min-width: 0;
-    padding-right: calc(var(--dataset-aside-width) + 18px);
+    padding-right: calc(var(--dataset-aside-width) - 10px);
   }
   .dataset-main {
     min-width: 0;
@@ -452,22 +452,19 @@
   }
   .dataset-aside {
     position: fixed;
-    top: 24px;
-    right: 24px;
-    bottom: 24px;
+    top: 0;
+    right: 0;
+    bottom: 0;
     z-index: 20;
     width: var(--dataset-aside-width);
     overflow-y: auto;
   }
   .training-panel {
     min-height: 100%;
-    border: 1px solid var(--app-border);
-    border-radius: 16px;
+    border-left: 1px solid var(--app-border);
     background: var(--app-surface);
     padding: 16px;
-    box-shadow:
-      0 14px 34px rgba(15, 23, 42, 0.08),
-      0 1px 2px rgba(15, 23, 42, 0.05);
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.035);
   }
   .training-tabs {
     display: grid;
