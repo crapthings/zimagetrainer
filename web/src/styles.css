@@ -1136,8 +1136,9 @@
     text-underline-offset: 3px;
   }
   .training-monitor {
+    --training-space: 12px;
     display: grid;
-    gap: 10px;
+    gap: var(--training-space);
     margin-top: 16px;
   }
   .training-view-tabs {
@@ -1228,15 +1229,15 @@
     display: grid;
     height: 420px;
     grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
-    gap: 14px;
+    gap: var(--training-space);
     min-width: 0;
     align-items: stretch;
   }
   .training-metrics {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: var(--training-space);
+    margin-bottom: var(--training-space);
   }
   .training-metrics > div {
     position: relative;
@@ -1248,7 +1249,7 @@
     border: 1px solid var(--app-border);
     border-radius: 12px;
     background: var(--app-surface);
-    padding: 14px 16px;
+    padding: var(--training-space);
   }
   .training-metrics span {
     color: var(--color-olive-500);
@@ -1294,7 +1295,7 @@
     border: 1px solid var(--app-border);
     border-radius: 14px;
     background: var(--app-surface);
-    padding: 16px;
+    padding: var(--training-space);
   }
   .training-chart {
     display: grid;
@@ -1304,14 +1305,14 @@
     position: relative;
     height: 100%;
     overflow: hidden;
-    padding-top: 20px;
+    padding-top: var(--training-space);
   }
   .training-section-heading {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 12px;
+    gap: var(--training-space);
+    margin-bottom: var(--training-space);
   }
   .training-section-heading h3 {
     color: var(--color-olive-900);
@@ -1327,7 +1328,7 @@
   .training-insights {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 14px;
+    gap: var(--training-space);
   }
   .training-events,
   .training-validation {
@@ -1416,7 +1417,7 @@
   .training-sample-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
+    gap: var(--training-space);
   }
   .training-sample-grid a {
     min-width: 0;
@@ -1445,7 +1446,7 @@
     overflow: auto;
     border-radius: 9px;
     background: var(--color-olive-950);
-    padding: 14px;
+    padding: var(--training-space);
     color: var(--color-olive-200);
     font-size: 11px;
     line-height: 1.65;
