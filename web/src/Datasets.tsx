@@ -14,7 +14,7 @@ import {
 } from "@floating-ui/react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import ModelSelect from "./ModelSelect";
+import { captionModels } from "./ModelSelect";
 import { useStore } from "./store";
 
 const API = "";
@@ -56,57 +56,141 @@ const getDataset = async (
 ): Promise<{ dataset: Dataset; images: Image[] }> =>
   (await fetch(`${API}/api/datasets/${id}`)).json();
 
-function CaptionSettings({
+function CaptionActions({
   model,
   prompt,
   onModel,
   onPrompt,
   onSave,
+  onCaption,
+  onRecaption,
+  disabled,
+  captioning,
   saving,
+  apiKeyMissing,
 }: {
   model: string;
   prompt: string;
   onModel: (v: string) => void;
   onPrompt: (v: string) => void;
   onSave: () => void;
+  onCaption: () => void;
+  onRecaption: () => void;
+  disabled: boolean;
+  captioning: boolean;
   saving: boolean;
+  apiKeyMissing: boolean;
 }) {
+  const [open, setOpen] = useState(false);
+  const selected =
+    captionModels.find((candidate) => candidate.id === model) ??
+    captionModels[0];
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: setOpen,
+    placement: "bottom-end",
+    middleware: [offset(6), flip(), shift({ padding: 12 })],
+    whileElementsMounted: autoUpdate,
+  });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    useClick(context),
+    useDismiss(context),
+    useRole(context, { role: "dialog" }),
+  ]);
+
   return (
-    <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-2">
-      <summary className="cursor-pointer text-xs font-semibold text-slate-700">
-        Caption settings
-      </summary>
-      <p className="mt-2 text-[11px] text-slate-500">
-        Saved only for this dataset.
-      </p>
-      <label>
-        Gemini model
-        <ModelSelect value={model} onChange={onModel} />
-      </label>
-      <label>
-        System prompt
-        <textarea
-          className="mt-1 min-h-28 w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-cyan-500"
-          value={prompt}
-          onChange={(e) => onPrompt(e.target.value)}
-        />
-      </label>
-      <div className="mt-3 flex items-center justify-between">
+    <>
+      <div className="caption-combo">
         <button
-          className="text-xs font-semibold text-cyan-700 hover:underline"
-          onClick={() => onPrompt(DEFAULT_CAPTION_PROMPT)}
+          className="caption-combo-main"
+          disabled={disabled}
+          onClick={onCaption}
         >
-          Restore default
+          <span>{captioning ? "Captioning…" : "Caption missing"}</span>
+          <small>{selected.name}</small>
         </button>
         <button
-          className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
-          disabled={saving}
-          onClick={onSave}
+          ref={refs.setReference}
+          className="caption-combo-toggle"
+          aria-label="Caption options"
+          disabled={captioning}
+          {...getReferenceProps()}
         >
-          Save settings
+          <span aria-hidden="true">⌄</span>
         </button>
       </div>
-    </details>
+
+      {open && (
+        <FloatingPortal>
+          <div
+            ref={refs.setFloating}
+            style={floatingStyles}
+            className="caption-options"
+            {...getFloatingProps()}
+          >
+            {apiKeyMissing && (
+              <Link className="caption-key-warning" to="/settings">
+                Gemini API key is missing. Add one in Settings.
+              </Link>
+            )}
+            <p className="caption-options-label">Caption model</p>
+            <div className="mt-1 grid gap-1">
+              {captionModels.map((candidate) => (
+                <button
+                  key={candidate.id}
+                  className={`caption-model-option ${candidate.id === model ? "caption-model-option-active" : ""}`}
+                  onClick={() => {
+                    onModel(candidate.id);
+                    setOpen(false);
+                  }}
+                >
+                  <span>{candidate.name}</span>
+                  {candidate.id === model && <span aria-hidden="true">✓</span>}
+                </button>
+              ))}
+            </div>
+
+            <div className="caption-options-divider" />
+            <button
+              className="caption-recaption-action"
+              disabled={disabled}
+              onClick={() => {
+                onRecaption();
+                setOpen(false);
+              }}
+            >
+              Re-caption all images
+            </button>
+
+            <details className="mt-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <summary className="cursor-pointer text-xs font-semibold text-slate-700">
+                System prompt
+              </summary>
+              <textarea
+                className="mt-2 min-h-28 w-full rounded-md border border-slate-200 bg-white p-2 text-xs text-slate-800 outline-none focus:border-cyan-500"
+                value={prompt}
+                onChange={(event) => onPrompt(event.target.value)}
+              />
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <button
+                  className="text-xs font-semibold text-cyan-700 hover:underline"
+                  onClick={() => onPrompt(DEFAULT_CAPTION_PROMPT)}
+                >
+                  Restore default
+                </button>
+                <button
+                  className="rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
+                  disabled={saving}
+                  onClick={onSave}
+                >
+                  {saving ? "Saving…" : "Save prompt"}
+                </button>
+              </div>
+            </details>
+          </div>
+        </FloatingPortal>
+      )}
+    </>
   );
 }
 
@@ -655,11 +739,14 @@ export function DatasetDetail() {
       queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
   });
   const saveSettings = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (overrides: { model?: string; prompt?: string } = {}) => {
       const r = await fetch(`${API}/api/datasets/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ system_prompt: prompt, caption_model: model }),
+        body: JSON.stringify({
+          system_prompt: overrides.prompt ?? prompt,
+          caption_model: overrides.model ?? model,
+        }),
       });
       if (!r.ok) throw new Error("Could not save settings");
     },
@@ -811,16 +898,9 @@ export function DatasetDetail() {
         </header>
 
         <section className="dataset-toolbar">
-          <div className="dataset-toolbar-section dataset-upload-tools">
-            <h3 className="text-sm font-semibold">Upload images</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Add the images you want this LoRA to learn.{" "}
-              {data.images.length
-                ? `${data.images.length} images are ready to inspect.`
-                : "No images yet."}
-            </p>
+          <div className="dataset-upload-tools">
             <button
-              className="mt-3 rounded-md bg-cyan-600 px-3 py-1.5 text-xs font-semibold text-white"
+              className="dataset-upload-button"
               onClick={() => filesRef.current?.click()}
             >
               {upload.isPending ? "Uploading…" : "Upload images"}
@@ -834,44 +914,22 @@ export function DatasetDetail() {
               onChange={(e) => e.target.files && upload.mutate(e.target.files)}
             />
           </div>
-          <div className="dataset-toolbar-section dataset-caption-tools">
-            <h3 className="text-sm font-semibold">Generate captions</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              {captionedCount}/{data.images.length} images have captions. You
-              can edit every caption below before training.
-            </p>
-            {!store.apiKey && (
-              <p className="mt-2 text-[11px] text-amber-700">
-                No Gemini key is saved in this browser.{" "}
-                <Link className="font-semibold underline" to="/settings">
-                  Add one in Settings
-                </Link>
-                , or use a server-side GEMINI_API_KEY.
-              </p>
-            )}
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                className="rounded-md border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-xs font-semibold text-cyan-700 hover:bg-cyan-100 disabled:opacity-40"
-                disabled={inProgress || !data.images.length}
-                onClick={() => caption.mutate(false)}
-              >
-                {inProgress ? "Captioning…" : "Caption missing"}
-              </button>
-              <button
-                className="rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40"
-                disabled={inProgress || !data.images.length}
-                onClick={() => caption.mutate(true)}
-              >
-                Re-caption all
-              </button>
-            </div>
-            <CaptionSettings
+          <div className="dataset-caption-tools">
+            <CaptionActions
               model={model}
               prompt={prompt}
-              onModel={setModel}
+              onModel={(nextModel) => {
+                setModel(nextModel);
+                saveSettings.mutate({ model: nextModel });
+              }}
               onPrompt={setPrompt}
-              onSave={() => saveSettings.mutate()}
+              onSave={() => saveSettings.mutate({ prompt })}
+              onCaption={() => caption.mutate(false)}
+              onRecaption={() => caption.mutate(true)}
+              disabled={inProgress || caption.isPending || !data.images.length}
+              captioning={inProgress || caption.isPending}
               saving={saveSettings.isPending}
+              apiKeyMissing={!store.apiKey}
             />
           </div>
         </section>
