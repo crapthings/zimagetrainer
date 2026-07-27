@@ -12,7 +12,7 @@ DEFAULTS: dict[str, Any] = {
     "data": {"folder": "data/train", "resolution": 1024, "caption_extension": ".txt", "aspect_ratio_bucketing": True},
     "lora": {"rank": 16, "alpha": 16},
     "train": {"output_dir": "outputs/lora", "steps": 1000, "batch_size": 1, "gradient_accumulation": 1, "learning_rate": 1.0e-4, "save_every": 250, "keep_last": 3, "seed": 42, "log_every": 1, "gradient_checkpointing": True, "offload_aux_models": True},
-    "sample": {"enabled": False, "prompt": "", "prompts": [], "samples": [], "every": 250, "width": 1024, "height": 1024, "seed": 42},
+    "sample": {"enabled": False, "samples": [], "every": 250, "seed": 42},
 }
 
 def _merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
@@ -22,31 +22,24 @@ def _merge(base: dict[str, Any], overrides: dict[str, Any]) -> dict[str, Any]:
     return result
 
 def validation_samples(sample: dict[str, Any]) -> list[dict[str, Any]]:
-    default_width = int(sample.get("width", 1024))
-    default_height = int(sample.get("height", 1024))
-    samples = sample.get("samples")
-    if isinstance(samples, list):
-        cleaned_samples = []
-        for item in samples:
-            if not isinstance(item, dict) or not str(item.get("prompt", "")).strip():
-                continue
-            cleaned_samples.append({
-                "prompt": str(item["prompt"]).strip(),
-                "width": int(item.get("width", default_width)),
-                "height": int(item.get("height", default_height)),
-            })
-        if cleaned_samples:
-            return cleaned_samples
-    prompts = sample.get("prompts")
-    if isinstance(prompts, list):
-        cleaned = [str(prompt).strip() for prompt in prompts if str(prompt).strip()]
-        if cleaned:
-            return [{"prompt": prompt, "width": default_width, "height": default_height} for prompt in cleaned]
-    legacy_prompt = str(sample.get("prompt", "")).strip()
-    return [{"prompt": legacy_prompt, "width": default_width, "height": default_height}] if legacy_prompt else []
-
-def validation_prompts(sample: dict[str, Any]) -> list[str]:
-    return [item["prompt"] for item in validation_samples(sample)]
+    samples = sample["samples"]
+    if not isinstance(samples, list):
+        raise ValueError("sample.samples must be a list")
+    cleaned = []
+    for item in samples:
+        if not isinstance(item, dict):
+            raise ValueError("each sample must be an object")
+        if not {"prompt", "width", "height"} <= item.keys():
+            raise ValueError("each sample requires prompt, width, and height")
+        prompt = str(item["prompt"]).strip()
+        if not prompt:
+            raise ValueError("each sample.prompt must not be empty")
+        cleaned.append({
+            "prompt": prompt,
+            "width": int(item["width"]),
+            "height": int(item["height"]),
+        })
+    return cleaned
 
 def load_config(path: str | Path) -> dict[str, Any]:
     with Path(path).open("r", encoding="utf-8") as file:
@@ -63,13 +56,9 @@ def load_config(path: str | Path) -> dict[str, Any]:
         raise ValueError("aspect-ratio bucketing currently requires train.batch_size: 1")
     samples = validation_samples(config["sample"])
     if config["sample"]["enabled"] and not samples:
-        raise ValueError("sample.samples, sample.prompts, or sample.prompt is required when sampling is enabled")
+        raise ValueError("sample.samples is required when sampling is enabled")
     if config["sample"]["every"] <= 0:
         raise ValueError("sample.every must be positive")
-    if config["sample"]["width"] <= 0 or config["sample"]["height"] <= 0:
-        raise ValueError("sample.width and sample.height must be positive")
-    if config["sample"]["width"] % 16 or config["sample"]["height"] % 16:
-        raise ValueError("sample.width and sample.height must be divisible by 16")
     if any(item["width"] <= 0 or item["height"] <= 0 for item in samples):
         raise ValueError("sample dimensions must be positive")
     if any(item["width"] % 16 or item["height"] % 16 for item in samples):

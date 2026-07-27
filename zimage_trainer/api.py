@@ -36,8 +36,7 @@ DEFAULT_CAPTION_PROMPT = "Write one concise, factual image-training caption. Des
 
 
 class CaptionRequest(BaseModel):
-    dataset_id: str | None = None
-    folder: str = "data/train"
+    dataset_id: str
     api_key: str | None = None
     model: str | None = None
     overwrite: bool = False
@@ -86,35 +85,9 @@ class EventHub:
 hub = EventHub()
 training_queue: asyncio.Queue[tuple[str, Path]] = asyncio.Queue()
 training_worker: asyncio.Task | None = None
-app = FastAPI(title="Z-Image Trainer API")
+app = FastAPI(title="Z-Forge API")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/files", StaticFiles(directory=ROOT), name="files")
-
-
-def resolve_folder(value: str) -> Path:
-    path = (ROOT / value).resolve()
-    if ROOT not in path.parents and path != ROOT:
-        raise HTTPException(400, "Folder must be inside this project")
-    if not path.is_dir():
-        raise HTTPException(404, f"Folder not found: {value}")
-    return path
-
-
-def list_images(folder: Path) -> list[dict[str, Any]]:
-    result = []
-    for path in sorted(p for p in folder.rglob("*") if p.suffix.lower() in IMAGE_SUFFIXES):
-        caption_path = path.with_suffix(".txt")
-        result.append({"path": path.relative_to(ROOT).as_posix(), "caption": caption_path.read_text(encoding="utf-8").strip() if caption_path.exists() else ""})
-    return result
-
-
-@app.get("/api/dataset")
-async def dataset(folder: str = "data/train") -> dict[str, Any]:
-    path = resolve_folder(folder)
-    relative_folder = path.relative_to(ROOT).as_posix()
-    images = list_images(path)
-    database.sync_images(relative_folder, images)
-    return {"folder": relative_folder, "images": images}
 
 
 @app.get("/api/datasets")
@@ -275,17 +248,10 @@ def caption_image(path: Path, api_key: str | None, model: str, system_prompt: st
 
 @app.post("/api/caption")
 async def caption(request: CaptionRequest) -> dict[str, Any]:
-    if request.dataset_id:
-        dataset = get_dataset_or_404(request.dataset_id)
-        folder = ROOT / dataset["folder"]
-        images = [{"path": image["path"], "caption": image["caption"]} for image in database.images(request.dataset_id)]
-        system_prompt = request.system_prompt or dataset.get("system_prompt") or DEFAULT_CAPTION_PROMPT
-        model = request.model or dataset.get("caption_model") or "gemini-3.5-flash-lite"
-    else:
-        folder = resolve_folder(request.folder)
-        images = list_images(folder)
-        system_prompt = request.system_prompt or DEFAULT_CAPTION_PROMPT
-        model = request.model
+    dataset = get_dataset_or_404(request.dataset_id)
+    images = [{"path": image["path"], "caption": image["caption"]} for image in database.images(request.dataset_id)]
+    system_prompt = request.system_prompt or dataset["system_prompt"] or DEFAULT_CAPTION_PROMPT
+    model = request.model or dataset["caption_model"]
     candidates = [item for item in images if request.overwrite or not (ROOT / item["path"]).with_suffix(".txt").exists()]
     await hub.publish({"type": "caption", "status": "started", "total": len(candidates), "concurrency": request.concurrency})
     semaphore = asyncio.Semaphore(request.concurrency)
@@ -306,8 +272,7 @@ async def caption(request: CaptionRequest) -> dict[str, Any]:
             continue
         assert text is not None
         (ROOT / item["path"]).with_suffix(".txt").write_text(text + "\n", encoding="utf-8")
-        if request.dataset_id:
-            database.update_image_caption(item["path"], text)
+        database.update_image_caption(item["path"], text)
         updated += 1
         await hub.publish({"type": "caption", "status": "progress", "current": completed, "total": len(candidates), "path": item["path"], "caption": text})
     await hub.publish({"type": "caption", "status": "finished", "updated": updated, "errors": errors})

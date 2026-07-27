@@ -36,16 +36,12 @@ class Database:
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(job_id) REFERENCES jobs(id)
                 );
-                CREATE TABLE IF NOT EXISTS dataset_images (
-                    path TEXT PRIMARY KEY,
-                    folder TEXT NOT NULL,
-                    caption TEXT NOT NULL DEFAULT '',
-                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-                );
                 CREATE TABLE IF NOT EXISTS datasets (
                     id TEXT PRIMARY KEY,
                     name TEXT NOT NULL,
                     folder TEXT NOT NULL UNIQUE,
+                    system_prompt TEXT NOT NULL DEFAULT '',
+                    caption_model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite',
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
                 );
                 CREATE TABLE IF NOT EXISTS images (
@@ -58,14 +54,6 @@ class Database:
                     FOREIGN KEY(dataset_id) REFERENCES datasets(id)
                 );
             """)
-            columns = {row[1] for row in self.connection.execute("PRAGMA table_info(datasets)")}
-            if "system_prompt" not in columns:
-                self.connection.execute("ALTER TABLE datasets ADD COLUMN system_prompt TEXT NOT NULL DEFAULT ''")
-            if "caption_model" not in columns:
-                self.connection.execute("ALTER TABLE datasets ADD COLUMN caption_model TEXT NOT NULL DEFAULT 'gemini-3.5-flash-lite'")
-            job_columns = {row[1] for row in self.connection.execute("PRAGMA table_info(jobs)")}
-            if "error" not in job_columns:
-                self.connection.execute("ALTER TABLE jobs ADD COLUMN error TEXT")
 
     def create_job(self, job_id: str, config: dict[str, Any], config_path: str) -> None:
         with self.lock, self.connection:
@@ -134,11 +122,6 @@ class Database:
     def add_event(self, event: dict[str, Any]) -> None:
         with self.lock, self.connection:
             self.connection.execute("INSERT INTO events (job_id, event_json) VALUES (?, ?)", (event.get("jobId"), json.dumps(event)))
-
-    def sync_images(self, folder: str, images: list[dict[str, str]]) -> None:
-        with self.lock, self.connection:
-            self.connection.executemany("""INSERT INTO dataset_images (path, folder, caption) VALUES (?, ?, ?)
-                ON CONFLICT(path) DO UPDATE SET caption=excluded.caption, folder=excluded.folder, updated_at=CURRENT_TIMESTAMP""", [(image["path"], folder, image["caption"]) for image in images])
 
     def create_dataset(self, dataset_id: str, name: str, folder: str) -> dict[str, Any]:
         with self.lock, self.connection:
