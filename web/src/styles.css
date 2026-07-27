@@ -1224,24 +1224,28 @@
   .run-status-failed {
     background: var(--color-red-500);
   }
+  .training-overview {
+    display: grid;
+    grid-template-columns: minmax(300px, 0.72fr) minmax(520px, 1.55fr);
+    gap: 14px;
+    align-items: stretch;
+  }
   .training-metrics {
     display: grid;
-    grid-template-columns: minmax(240px, 1.6fr) repeat(3, minmax(110px, 0.7fr));
-    overflow: hidden;
-    border: 1px solid var(--app-border);
-    border-radius: 14px;
-    background: var(--app-surface);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
   .training-metrics > div {
+    position: relative;
     display: grid;
-    min-height: 86px;
+    min-height: 0;
     align-content: center;
     gap: 7px;
-    border-left: 1px solid var(--color-olive-100);
+    overflow: hidden;
+    border: 1px solid var(--app-border);
+    border-radius: 12px;
+    background: var(--app-surface);
     padding: 14px 16px;
-  }
-  .training-metrics > div:first-child {
-    border-left: 0;
   }
   .training-metrics span {
     color: var(--color-olive-500);
@@ -1260,20 +1264,20 @@
     font-weight: 500;
   }
   .training-progress-metric > div:first-child {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
+    display: contents;
   }
   .training-progress-track {
-    height: 6px;
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    left: -1px;
+    height: 4px;
     overflow: hidden;
-    border-radius: 999px;
     background: var(--color-olive-100);
   }
   .training-progress-track i {
     display: block;
     height: 100%;
-    border-radius: inherit;
     background: var(--color-olive-700);
     transition: width 0.3s ease;
   }
@@ -1291,6 +1295,10 @@
     border-radius: 14px;
     background: var(--app-surface);
     padding: 16px;
+  }
+  .training-chart {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
   }
   .training-section-heading {
     display: flex;
@@ -1557,18 +1565,17 @@
     flex-direction: column;
     gap: 6px;
   }
-  .training-metrics {
-    grid-template-columns: repeat(3, 1fr);
-  }
-  .training-progress-metric {
-    grid-column: 1 / -1;
-    border-bottom: 1px solid var(--color-olive-100);
-  }
-  .training-metrics > div:nth-child(2) {
-    border-left: 0;
-  }
   .training-insights {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 960px) {
+  .training-overview {
+    grid-template-columns: 1fr;
+  }
+  .training-metrics {
+    min-height: 170px;
   }
 }
 
@@ -1610,11 +1617,6 @@
   }
   .training-metrics {
     grid-template-columns: 1fr 1fr;
-  }
-  .training-metrics > div:nth-child(4) {
-    grid-column: 1 / -1;
-    border-top: 1px solid var(--color-olive-100);
-    border-left: 0;
   }
   .training-sample-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

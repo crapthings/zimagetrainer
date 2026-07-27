@@ -805,52 +805,54 @@ function TrainingMonitor() {
                 </span>
               </section>
 
-              <section className="training-metrics">
-                <div className="training-progress-metric">
+              <div className="training-overview">
+                <section className="training-metrics">
+                  <div className="training-progress-metric">
+                    <div>
+                      <span>Progress</span>
+                      <strong>{progress}%</strong>
+                    </div>
+                    <div className="training-progress-track">
+                      <i style={{ width: `${progress}%` }} />
+                    </div>
+                  </div>
                   <div>
-                    <span>Progress</span>
-                    <strong>{progress}%</strong>
+                    <span>Step</span>
+                    <strong>
+                      {step.toLocaleString()}
+                      <small> / {total.toLocaleString()}</small>
+                    </strong>
                   </div>
-                  <div className="training-progress-track">
-                    <i style={{ width: `${progress}%` }} />
+                  <div>
+                    <span>Current loss</span>
+                    <strong>{loss?.toFixed(5) ?? "—"}</strong>
                   </div>
-                </div>
-                <div>
-                  <span>Step</span>
-                  <strong>
-                    {step.toLocaleString()}
-                    <small> / {total.toLocaleString()}</small>
-                  </strong>
-                </div>
-                <div>
-                  <span>Current loss</span>
-                  <strong>{loss?.toFixed(5) ?? "—"}</strong>
-                </div>
-                <div>
-                  <span>Recent trend</span>
-                  <strong
-                    className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
-                  >
-                    {lossTrend}
-                  </strong>
-                </div>
-              </section>
+                  <div>
+                    <span>Recent trend</span>
+                    <strong
+                      className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
+                    >
+                      {lossTrend}
+                    </strong>
+                  </div>
+                </section>
 
-              <section className="training-chart">
-                <div className="training-section-heading">
-                  <div>
-                    <h3>Training loss</h3>
-                    <p>Latest 300 recorded steps</p>
+                <section className="training-chart">
+                  <div className="training-section-heading">
+                    <div>
+                      <h3>Training loss</h3>
+                      <p>Latest 300 recorded steps</p>
+                    </div>
+                    {latest && (
+                      <span>
+                        Step {latest.step.toLocaleString()} ·{" "}
+                        {latest.loss.toFixed(5)}
+                      </span>
+                    )}
                   </div>
-                  {latest && (
-                    <span>
-                      Step {latest.step.toLocaleString()} ·{" "}
-                      {latest.loss.toFixed(5)}
-                    </span>
-                  )}
-                </div>
-                <LossChart points={points} />
-              </section>
+                  <LossChart points={points} />
+                </section>
+              </div>
 
               <div className="training-insights">
                 <section className="training-events">
