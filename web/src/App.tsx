@@ -6,6 +6,8 @@ import {
   Outlet,
   Route,
   Routes,
+  useNavigate,
+  useParams,
 } from "react-router-dom";
 import { useStore } from "./store";
 import { DatasetDetail, DatasetList } from "./Datasets";
@@ -736,7 +738,8 @@ function TrainingRunSelect({
 
 function TrainingMonitor() {
   const s = useStore();
-  const [selectedId, setSelectedId] = useState<string>();
+  const navigate = useNavigate();
+  const { runId } = useParams<{ runId: string }>();
   const [view, setView] = useState<"monitor" | "raw">("monitor");
   const { data = { jobs: {} } } = useQuery({
     queryKey: ["jobs"],
@@ -754,7 +757,15 @@ function TrainingMonitor() {
   const history = jobs.filter(
     ([, job]) => !["queued", "running", "sampling"].includes(job.status),
   );
-  const activeId = selectedId ?? current[0]?.[0] ?? history[0]?.[0];
+  const fallbackId = current[0]?.[0] ?? history[0]?.[0];
+  const routeIdIsValid =
+    !!runId && jobs.some(([id]) => id === runId);
+  useEffect(() => {
+    if (fallbackId && (!runId || !routeIdIsValid)) {
+      navigate(`/training/${fallbackId}`, { replace: true });
+    }
+  }, [fallbackId, navigate, routeIdIsValid, runId]);
+  const activeId = routeIdIsValid ? runId : fallbackId;
   const selectedJob = jobs.find(([id]) => id === activeId)?.[1];
   const { data: monitor } = useQuery({
     queryKey: ["monitor", activeId],
@@ -808,7 +819,7 @@ function TrainingMonitor() {
             <TrainingRunSelect
               jobs={[...current, ...history]}
               value={activeId}
-              onChange={setSelectedId}
+              onChange={(id) => navigate(`/training/${id}`)}
             />
           )}
         </div>
@@ -1055,6 +1066,7 @@ export default function App() {
       <Routes>
         <Route element={<Layout />}>
           <Route path="/training" element={<TrainingMonitor />} />
+          <Route path="/training/:runId" element={<TrainingMonitor />} />
           <Route path="/datasets" element={<DatasetList />} />
           <Route path="/datasets/:id" element={<DatasetDetail />} />
           <Route
