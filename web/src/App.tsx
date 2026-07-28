@@ -164,16 +164,32 @@ function LossChart({
   });
   const width = 640,
     height = 176,
-    pad = 16,
+    padTop = 14,
+    padBottom = 18,
+    padLeft = 42,
+    padRight = 16,
     min = Math.min(...smoothed.map((x) => x.loss)),
     max = Math.max(...smoothed.map((x) => x.loss)),
     span = Math.max(0.00001, max - min);
+  const chartHeight = height - padTop - padBottom;
+  const chartWidth = width - padLeft - padRight;
+  const xTicks = Array.from({ length: 5 }, (_, index) =>
+    Math.round((total * index) / 4),
+  );
+  const yTicks = Array.from(
+    { length: 4 },
+    (_, index) => max - (span * index) / 3,
+  );
+  const lossTick = (value: number) => value.toFixed(max < 1 ? 3 : 2);
   const coordinates = smoothed.map((point) => ({
     x:
-      pad +
+      padLeft +
       (Math.min(point.step, Math.max(1, total)) / Math.max(1, total)) *
-        (width - pad * 2),
-    y: height - pad - ((point.loss - min) / span) * (height - pad * 2),
+        chartWidth,
+    y:
+      height -
+      padBottom -
+      ((point.loss - min) / span) * chartHeight,
   }));
   const path = coordinates
     .slice(0, -1)
@@ -193,7 +209,8 @@ function LossChart({
     })
     .join(" ");
   return (
-    <div>
+    <div className="loss-chart">
+      <div className="loss-chart-canvas">
       <svg
         className="h-44 w-full overflow-visible"
         viewBox={`0 0 ${width} ${height}`}
@@ -201,11 +218,40 @@ function LossChart({
         role="img"
         aria-label="Training loss chart"
       >
+        {xTicks.map((tick) => {
+          const x = padLeft + (tick / Math.max(1, total)) * chartWidth;
+          return (
+            <line
+              key={`x-${tick}`}
+              x1={x}
+              x2={x}
+              y1={padTop}
+              y2={height - padBottom}
+              stroke="var(--color-olive-100)"
+              strokeDasharray="2 4"
+            />
+          );
+        })}
+        {yTicks.map((tick) => {
+          const y =
+            height - padBottom - ((tick - min) / span) * chartHeight;
+          return (
+            <line
+              key={`y-${tick}`}
+              x1={padLeft}
+              x2={width - padRight}
+              y1={y}
+              y2={y}
+              stroke="var(--color-olive-100)"
+              strokeDasharray="2 4"
+            />
+          );
+        })}
         <line
-          x1={pad}
-          x2={width - pad}
-          y1={height - pad}
-          y2={height - pad}
+          x1={padLeft}
+          x2={width - padRight}
+          y1={height - padBottom}
+          y2={height - padBottom}
           stroke="#cbd5e1"
         />
         <path
@@ -218,7 +264,24 @@ function LossChart({
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="flex justify-between text-[10px] text-olive-400">
+      <div className="loss-chart-y-ticks" aria-hidden="true">
+        {yTicks.map((tick) => {
+          const top =
+            height - padBottom - ((tick - min) / span) * chartHeight;
+          return (
+            <span key={tick} style={{ top: `${top}px` }}>
+              {lossTick(tick)}
+            </span>
+          );
+        })}
+      </div>
+      </div>
+      <div className="loss-chart-x-ticks" aria-label="Training steps">
+        {xTicks.map((tick) => (
+          <span key={tick}>{tick.toLocaleString()}</span>
+        ))}
+      </div>
+      <div className="loss-chart-legacy-footer">
         <span>step 0</span>
         <span>
           loss {max.toFixed(4)} → {min.toFixed(4)}
@@ -879,6 +942,10 @@ function TrainingMonitor() {
                     <span>{progress}% complete</span>
                   </div>
                   <div className="training-metrics">
+                    <div>
+                      <span>Current step</span>
+                      <strong>{step.toLocaleString()}</strong>
+                    </div>
                     <div>
                       <span>Max steps</span>
                       <strong>{total.toLocaleString()}</strong>

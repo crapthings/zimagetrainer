@@ -1250,7 +1250,7 @@
   }
   .training-metrics {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: var(--training-space);
     margin-bottom: var(--training-space);
   }
@@ -1466,6 +1466,48 @@
     font-size: 11px;
     line-height: 1.65;
     white-space: pre-wrap;
+  }
+  .loss-chart-canvas {
+    position: relative;
+    height: 11rem;
+  }
+  .loss-chart-canvas svg {
+    display: block;
+  }
+  .loss-chart-y-ticks {
+    position: absolute;
+    inset: 0;
+    width: 36px;
+    pointer-events: none;
+  }
+  .loss-chart-y-ticks span {
+    position: absolute;
+    right: 0;
+    color: var(--color-olive-400);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+    transform: translateY(-50%);
+  }
+  .loss-chart-x-ticks {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    margin: 0 16px 0 42px;
+    color: var(--color-olive-400);
+    font-size: 9px;
+    font-variant-numeric: tabular-nums;
+  }
+  .loss-chart-x-ticks span:nth-child(1) {
+    text-align: left;
+  }
+  .loss-chart-x-ticks span:not(:first-child):not(:last-child) {
+    text-align: center;
+  }
+  .loss-chart-x-ticks span:last-child {
+    text-align: right;
+  }
+  .loss-chart-legacy-footer {
+    display: none;
   }
   .training-output-tab pre {
     height: calc(100vh - 250px);
