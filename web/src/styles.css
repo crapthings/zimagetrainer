@@ -1201,10 +1201,25 @@
     gap: 8px;
     color: var(--color-olive-800);
   }
-  .training-run-status code {
-    overflow: hidden;
+  .training-run-id {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border-left: 1px solid var(--color-olive-200);
+    padding-left: 8px;
+  }
+  .training-run-id > span {
     color: var(--color-olive-400);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .training-run-id code {
+    overflow: hidden;
+    color: var(--color-olive-600);
     font-size: 10px;
+    font-variant-numeric: tabular-nums;
     text-overflow: ellipsis;
   }
   .run-status-dot {

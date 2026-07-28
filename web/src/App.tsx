@@ -447,7 +447,15 @@ function RunBrowser() {
   const history = jobs.filter(
     ([, job]) => !["queued", "running", "sampling"].includes(job.status),
   );
-  const activeId = selectedId ?? current[0]?.[0] ?? history[0]?.[0];
+  const selectedIdIsValid =
+    !!selectedId && jobs.some(([id]) => id === selectedId);
+  useEffect(() => {
+    if (selectedId && !selectedIdIsValid) setSelectedId(undefined);
+  }, [selectedId, selectedIdIsValid]);
+  const activeId =
+    (selectedIdIsValid ? selectedId : undefined) ??
+    current[0]?.[0] ??
+    history[0]?.[0];
   const { data: monitor } = useQuery({
     queryKey: ["job-log", activeId],
     queryFn: async () => {
@@ -835,7 +843,10 @@ function TrainingMonitor() {
                 <div className="training-run-status">
                   <span className={`run-status-dot run-status-${status}`} />
                   <strong className="capitalize">{status}</strong>
-                  <code>{activeId}</code>
+                  <span className="training-run-id" title={`Run ID: ${activeId}`}>
+                    <span>Run ID</span>
+                    <code>{activeId}</code>
+                  </span>
                 </div>
                 <span>
                   {["running", "sampling"].includes(status) && stage
