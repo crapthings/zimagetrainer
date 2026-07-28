@@ -65,6 +65,15 @@ class ImagesDeleteRequest(BaseModel):
     image_ids: list[str] = Field(min_length=1, max_length=1000)
 
 
+class GenerateRequest(BaseModel):
+    prompt: str = Field(min_length=1, max_length=4000)
+    width: int = Field(default=1024, ge=256, le=2048, multiple_of=16)
+    height: int = Field(default=1024, ge=256, le=2048, multiple_of=16)
+    seed: int = Field(default=42, ge=0, le=2**32 - 1)
+    steps: int = Field(default=9, ge=1, le=30)
+    lora_path: str | None = None
+
+
 class EventHub:
     def __init__(self) -> None:
         self.clients: set[WebSocket] = set()
@@ -85,6 +94,8 @@ class EventHub:
 hub = EventHub()
 training_queue: asyncio.Queue[tuple[str, Path]] = asyncio.Queue()
 training_worker: asyncio.Task | None = None
+inference_lock = asyncio.Lock()
+inference_running = False
 app = FastAPI(title="Z-Forge API")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/files", StaticFiles(directory=ROOT), name="files")
@@ -372,6 +383,97 @@ async def jobs() -> dict[str, Any]:
     return {"jobs": database.jobs()}
 
 
+def playground_loras() -> list[dict[str, Any]]:
+    """Return only exported LoRAs that live inside the managed outputs folder."""
+    options = []
+    jobs = database.jobs()
+    for checkpoint in (ROOT / "outputs").glob("*/*_lora/zimage_lora_step_*.safetensors"):
+        try:
+            relative = checkpoint.resolve().relative_to(ROOT).as_posix()
+        except ValueError:
+            continue
+        match = re.fullmatch(r"outputs/([^/]+)/([a-z0-9]+)_lora/zimage_lora_step_(\d+)\.safetensors", relative)
+        if not match:
+            continue
+        dataset_id, job_id, step = match.groups()
+        job = jobs.get(job_id, {})
+        rank, alpha = 16, 16.0
+        config_ref = job.get("config")
+        if isinstance(config_ref, str):
+            try:
+                config_path = (ROOT / config_ref).resolve()
+                if ROOT not in config_path.parents:
+                    raise ValueError("Invalid job config path")
+                config = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+                lora_config = config.get("lora", {})
+                rank = int(lora_config.get("rank", rank))
+                alpha = float(lora_config.get("alpha", alpha))
+            except (OSError, TypeError, ValueError, yaml.YAMLError):
+                pass
+        options.append({
+            "path": relative,
+            "job_id": job_id,
+            "dataset_id": dataset_id,
+            "step": int(step),
+            "status": job.get("status", "unknown"),
+            "rank": rank,
+            "alpha": alpha,
+        })
+    return sorted(options, key=lambda item: (item["dataset_id"], item["job_id"], item["step"]), reverse=True)
+
+
+@app.get("/api/playground/loras")
+async def list_playground_loras() -> dict[str, Any]:
+    return {"loras": playground_loras()}
+
+
+@app.post("/api/playground/generate")
+async def generate_playground_image(request: GenerateRequest) -> dict[str, str | int]:
+    global inference_running
+    if any(job["status"] in {"queued", "running"} for job in database.jobs().values()):
+        raise HTTPException(409, "A training run is using the GPU. Wait for it to finish before generating an image.")
+    known_loras = {item["path"]: item for item in playground_loras()}
+    lora = known_loras.get(request.lora_path) if request.lora_path else None
+    if request.lora_path and not lora:
+        raise HTTPException(422, "The selected LoRA checkpoint is no longer available.")
+    async with inference_lock:
+        # A training request can have been queued while this generation request
+        # was waiting for the inference lock.
+        if any(job["status"] in {"queued", "running"} for job in database.jobs().values()):
+            raise HTTPException(409, "A training run is using the GPU. Wait for it to finish before generating an image.")
+        inference_running = True
+        try:
+            generation_id = uuid.uuid4().hex[:8]
+            output = ROOT / "outputs" / "playground" / f"{generation_id}.png"
+            command = [
+                sys.executable, "infer.py", "--prompt", request.prompt, "--output", str(output),
+                "--seed", str(request.seed), "--width", str(request.width), "--height", str(request.height),
+                "--steps", str(request.steps),
+            ]
+            if lora:
+                command.extend([
+                    "--lora", str(ROOT / lora["path"]),
+                    "--lora-rank", str(lora["rank"]),
+                    "--lora-alpha", str(lora["alpha"]),
+                ])
+            result = await asyncio.to_thread(
+                subprocess.run,
+                command,
+                cwd=ROOT,
+                env={**os.environ, "PYTHONIOENCODING": "utf-8"},
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            if result.returncode:
+                detail = (result.stderr or result.stdout or "Image generation failed.").strip().splitlines()[-1]
+                raise HTTPException(500, detail)
+            return {"id": generation_id, "path": output.relative_to(ROOT).as_posix(), "seed": request.seed}
+        finally:
+            inference_running = False
+
+
 @app.get("/api/jobs/{job_id}/monitor")
 async def job_monitor(job_id: str) -> dict[str, Any]:
     monitor = database.job_monitor(job_id)
@@ -382,6 +484,8 @@ async def job_monitor(job_id: str) -> dict[str, Any]:
 
 @app.post("/api/train")
 async def start_training(request: TrainRequest) -> dict[str, str]:
+    if inference_running:
+        raise HTTPException(409, "An image is being generated. Start training after it finishes so the GPU is free.")
     job_id = uuid.uuid4().hex[:8]
     config = json.loads(json.dumps(request.config))
     folder = config.get("data", {}).get("folder")

@@ -18,6 +18,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { captionModels } from "./ModelSelect";
 import { FriendlyError } from "./errors";
 import { useStore } from "./store";
+import { useI18n } from "./i18n";
 
 const API = "";
 const DEFAULT_CAPTION_PROMPT =
@@ -106,6 +107,7 @@ function ValidationResolutionMenu({
   index: number;
   onChange: (changes: Partial<ValidationSample>) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const selected = validationResolutionGroups
     .flatMap((group) => group.options)
@@ -132,7 +134,7 @@ function ValidationResolutionMenu({
         ref={refs.setReference}
         type="button"
         className="validation-resolution-trigger"
-        aria-label={`Validation resolution ${index + 1}`}
+        aria-label={`${t("Validation resolution")} ${index + 1}`}
         {...getReferenceProps()}
       >
         <span>
@@ -160,7 +162,7 @@ function ValidationResolutionMenu({
           >
             {validationResolutionGroups.map((group) => (
               <div className="validation-resolution-group" key={group.label}>
-                <p>{group.label}</p>
+                <p>{group.label === "Landscape" || group.label === "Portrait" ? t(group.label) : group.label}</p>
                 {group.options.map((option) => {
                   const active =
                     option.width === sample.width &&
@@ -228,6 +230,7 @@ function CaptionActions({
   saving: boolean;
   apiKeyMissing: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const selected =
     captionModels.find((candidate) => candidate.id === model) ??
@@ -253,12 +256,12 @@ function CaptionActions({
           disabled={disabled}
           onClick={onCaption}
         >
-          <span>{captioning ? "Captioning…" : "Caption missing"}</span>
+          <span>{captioning ? t("Captioning…") : t("Caption missing")}</span>
         </button>
         <button
           ref={refs.setReference}
           className="caption-combo-toggle"
-          aria-label="Caption options"
+          aria-label={t("Caption options")}
           disabled={captioning}
           {...getReferenceProps()}
         >
@@ -285,12 +288,12 @@ function CaptionActions({
           >
             {apiKeyMissing && (
               <Link className="caption-key-warning" to="/settings">
-                Gemini API key is missing. Add one in Settings.
+                {t("Gemini API key is missing. Add one in Settings.")}
               </Link>
             )}
-            <p className="caption-options-label">Caption model</p>
+            <p className="caption-options-label">{t("Caption model")}</p>
             <p className="caption-current-model">
-              Current: <strong>{selected.name}</strong>
+              {t("Current:")} <strong>{selected.name}</strong>
             </p>
             <div className="mt-1 grid gap-1">
               {captionModels.map((candidate) => (
@@ -317,12 +320,12 @@ function CaptionActions({
                 setOpen(false);
               }}
             >
-              Re-caption all images
+              {t("Re-caption all images")}
             </button>
 
             <details className="mt-1 rounded-lg border border-olive-200 bg-olive-50 p-2">
               <summary className="cursor-pointer text-xs font-semibold text-olive-700">
-                System prompt
+                {t("System prompt")}
               </summary>
               <textarea
                 className="mt-2 min-h-28 w-full rounded-md border border-olive-200 bg-white p-2 text-xs text-olive-800 outline-none focus:border-olive-500"
@@ -334,14 +337,14 @@ function CaptionActions({
                   className="text-xs font-semibold text-olive-700 hover:underline"
                   onClick={() => onPrompt(DEFAULT_CAPTION_PROMPT)}
                 >
-                  Restore default
+                  {t("Restore default")}
                 </button>
                 <button
                   className="rounded-md bg-olive-600 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-40"
                   disabled={saving}
                   onClick={onSave}
                 >
-                  {saving ? "Saving…" : "Save prompt"}
+                  {saving ? t("Saving…") : t("Save prompt")}
                 </button>
               </div>
             </details>
@@ -369,6 +372,7 @@ function ConfirmAction({
   disabled?: boolean;
   danger?: boolean;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -413,7 +417,7 @@ function ConfirmAction({
                 className="rounded-md px-2 py-1.5 text-xs text-olive-600 hover:bg-olive-100"
                 onClick={() => setOpen(false)}
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
@@ -439,6 +443,7 @@ function DatasetActions({
   onDelete: () => void;
   deleting: boolean;
 }) {
+  const { t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const menu = useFloating({
@@ -474,7 +479,7 @@ function DatasetActions({
       <button
         ref={setReference}
         className="dataset-menu-trigger"
-        aria-label="Dataset actions"
+        aria-label={t("Dataset actions")}
         disabled={deleting}
         {...menuInteractions.getReferenceProps()}
       >
@@ -497,7 +502,7 @@ function DatasetActions({
                 setConfirmOpen(true);
               }}
             >
-              Delete dataset
+              {t("Delete dataset")}
             </button>
           </div>
         </FloatingPortal>
@@ -512,18 +517,17 @@ function DatasetActions({
             {...confirmInteractions.getFloatingProps()}
           >
             <h3 className="text-xs font-bold text-olive-900">
-              Delete this dataset?
+              {t("Delete this dataset?")}
             </h3>
             <p className="mt-1 text-[11px] leading-relaxed text-olive-500">
-              All images, captions, and metadata in this dataset will be
-              permanently deleted.
+              {t("All images, captions, and metadata in this dataset will be permanently deleted.")}
             </p>
             <div className="mt-3 flex justify-end gap-2">
               <button
                 className="rounded-md px-2 py-1.5 text-xs text-olive-600 hover:bg-olive-100"
                 onClick={() => setConfirmOpen(false)}
               >
-                Cancel
+                {t("Cancel")}
               </button>
               <button
                 className="rounded-md bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-40"
@@ -533,7 +537,7 @@ function DatasetActions({
                   setConfirmOpen(false);
                 }}
               >
-                {deleting ? "Deleting…" : "Delete dataset"}
+                {deleting ? t("Deleting…") : t("Delete dataset")}
               </button>
             </div>
           </div>
@@ -556,6 +560,7 @@ function TrainingPlan({
   onQueue: (params: TrainingParams) => void;
   queuing: boolean;
 }) {
+  const { t } = useI18n();
   const [preset, setPreset] = useState<"recommended" | "quick" | "custom">(
     "recommended",
   );
@@ -645,15 +650,15 @@ function TrainingPlan({
     `rounded-md border px-3 py-2 text-left transition ${preset === name ? "border-olive-400 bg-olive-50 ring-1 ring-olive-200" : "border-olive-200 bg-white hover:border-olive-300"}`;
   return (
     <section className="training-panel">
-      <h3 className="text-sm font-semibold">Training</h3>
-      <div className="training-tabs" role="tablist" aria-label="Training setup">
+      <h3 className="text-sm font-semibold">{t("Training")}</h3>
+      <div className="training-tabs" role="tablist" aria-label={t("Training setup")}>
         <button
           role="tab"
           aria-selected={panelTab === "training"}
           className={panelTab === "training" ? "training-tab-active" : ""}
           onClick={() => setPanelTab("training")}
         >
-          Training
+          {t("Training")}
         </button>
         <button
           role="tab"
@@ -661,7 +666,7 @@ function TrainingPlan({
           className={panelTab === "validation" ? "training-tab-active" : ""}
           onClick={() => setPanelTab("validation")}
         >
-          Validation
+          {t("Validation")}
           {params.sampleEnabled && (
             <span className="training-tab-count">
               {validationSamples.length}
@@ -678,13 +683,13 @@ function TrainingPlan({
               onClick={() => applyPreset("recommended")}
             >
               <span className="block text-xs font-semibold text-olive-800">
-                Recommended
+                {t("Recommended")}
               </span>
               <span className="mt-1 block text-[10px] text-olive-500">
                 {recommended.resolution}px · R{recommended.rank} ·{" "}
-                {recommended.steps} steps
+                {recommended.steps} {t("steps")}
               </span>
-              <span className="mt-1 block text-[9px] text-olive-500">
+              <span className="training-help-translation mt-1 block text-[9px] text-olive-500" data-translation={t("≈{count}× per image", { count: recommendedExposures })}>
                 ≈ {recommendedExposures}× per image
               </span>
             </button>
@@ -693,22 +698,22 @@ function TrainingPlan({
               onClick={() => applyPreset("quick")}
             >
               <span className="block text-xs font-semibold text-olive-800">
-                Test run
+                {t("Test run")}
               </span>
               <span className="mt-1 block text-[10px] text-olive-500">
-                {quick.resolution}px · R{quick.rank} · {quick.steps} steps
+                {quick.resolution}px · R{quick.rank} · {quick.steps} {t("steps")}
               </span>
-              <span className="mt-1 block text-[9px] text-olive-500">
+              <span className="training-help-translation mt-1 block text-[9px] text-olive-500" data-translation={t("Verify training and output · ≈{count}×", { count: quick.exposures_per_image })}>
                 Verify training and output · ≈ {quick.exposures_per_image}×
               </span>
             </button>
           </div>
           <div className="training-form">
             <section className="training-form-group">
-              <h4 className="training-form-title">Training parameters</h4>
+              <h4 className="training-form-title">{t("Training parameters")}</h4>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <label>
-                  Resolution
+                  {t("Resolution")}
                   <input
                     className="training-input"
                     type="number"
@@ -720,7 +725,7 @@ function TrainingPlan({
                   />
                 </label>
                 <label>
-                  Rank
+                  {t("Rank")}
                   <input
                     className="training-input"
                     type="number"
@@ -732,7 +737,7 @@ function TrainingPlan({
                   />
                 </label>
                 <label>
-                  Steps
+                  {t("Steps")}
                   <input
                     className="training-input"
                     type="number"
@@ -744,7 +749,7 @@ function TrainingPlan({
                   />
                 </label>
               </div>
-              <p className="mt-2 text-[10px] leading-relaxed text-olive-500">
+              <p className="training-help-translation mt-2 text-[10px] leading-relaxed text-olive-500" data-translation={t("≈{count} presentations per image at batch size 1. Compare validation checkpoints; more is not always better.", { count: exposuresPerImage })}>
                 ≈ {exposuresPerImage} presentations per image at batch size 1.
                 Compare validation checkpoints; more is not always better.
               </p>
@@ -753,10 +758,10 @@ function TrainingPlan({
             <div className="training-form-divider" role="separator" />
 
             <section className="training-form-group">
-              <h4 className="training-form-title">Checkpoints</h4>
+              <h4 className="training-form-title">{t("Checkpoints")}</h4>
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label>
-                  Save every
+                  {t("Save every")}
                   <div className="training-input-suffix">
                     <input
                       className="training-input"
@@ -768,11 +773,11 @@ function TrainingPlan({
                         setParams({ ...params, saveEvery: +e.target.value })
                       }
                     />
-                    <span>steps</span>
+                    <span>{t("Steps")}</span>
                   </div>
                 </label>
                 <label>
-                  Keep latest
+                  {t("Keep latest")}
                   <div className="training-input-suffix">
                     <input
                       className="training-input"
@@ -783,11 +788,11 @@ function TrainingPlan({
                         setParams({ ...params, keepLast: +e.target.value })
                       }
                     />
-                    <span>files</span>
+                    <span>{t("files")}</span>
                   </div>
                 </label>
               </div>
-              <p className="mt-2 text-[10px] text-olive-500">
+              <p className="training-help-translation mt-2 text-[10px] text-olive-500" data-translation={t("Creates {count} checkpoints; keeps the latest {kept}, including the final model.", { count: checkpointCount, kept: retainedCheckpointCount })}>
                 Creates {checkpointCount} checkpoint
                 {checkpointCount === 1 ? "" : "s"}; keeps the latest{" "}
                 {retainedCheckpointCount}, including the final model.
@@ -798,11 +803,11 @@ function TrainingPlan({
       ) : (
         <section className="training-validation">
           <div className="flex items-center justify-between gap-4">
-            <h4 className="training-form-title">Validation images</h4>
+            <h4 className="training-form-title">{t("Validation images")}</h4>
             <label className="validation-switch">
               <input
                 type="checkbox"
-                aria-label="Generate validation images"
+                aria-label={t("Generate validation images")}
                 checked={!!params.sampleEnabled}
                 onChange={(event) =>
                   setParams({
@@ -817,7 +822,7 @@ function TrainingPlan({
           {params.sampleEnabled && (
             <>
               <label className="validation-frequency">
-                Generate every
+                {t("Generate every")}
                 <div className="training-input-suffix">
                   <input
                     className="training-input"
@@ -828,14 +833,14 @@ function TrainingPlan({
                       setParams({ ...params, sampleEvery: +e.target.value })
                     }
                   />
-                  <span>steps</span>
+                  <span>{t("Steps")}</span>
                 </div>
               </label>
               <div className="training-prompt-list">
                 {validationSamples.map((sample, index) => (
                   <div className="training-prompt-item" key={index}>
                     <div className="validation-prompt-header">
-                      <span>Prompt {index + 1}</span>
+                      <span>{t("Prompt")} {index + 1}</span>
                       <div className="validation-prompt-actions">
                         <ValidationResolutionMenu
                           sample={sample}
@@ -848,8 +853,8 @@ function TrainingPlan({
                           <button
                             type="button"
                             className="validation-prompt-remove"
-                            aria-label={`Remove validation prompt ${index + 1}`}
-                            title="Remove prompt"
+                            aria-label={`${t("Remove prompt")} ${index + 1}`}
+                            title={t("Remove prompt")}
                             onClick={() =>
                               setParams({
                                 ...params,
@@ -880,7 +885,7 @@ function TrainingPlan({
                     </div>
                     <textarea
                       className="training-input validation-prompt-input"
-                      aria-label={`Validation prompt ${index + 1}`}
+                      aria-label={`${t("Validation")} ${t("Prompt")} ${index + 1}`}
                       value={sample.prompt}
                       onChange={(e) =>
                         updateValidationSample(index, {
@@ -904,7 +909,7 @@ function TrainingPlan({
                   })
                 }
               >
-                <span aria-hidden="true">＋</span> Add validation prompt
+                <span aria-hidden="true">＋</span> {t("Add validation prompt")}
               </button>
             </>
           )}
@@ -916,16 +921,16 @@ function TrainingPlan({
           disabled={!ready || !validationReady || queuing}
           onClick={() => onQueue(params)}
         >
-          {queuing ? "Adding training run…" : "Start training"}
+          {queuing ? t("Adding training run…") : t("Start training")}
         </button>
         {!ready ? (
           <p>
             {imageCount === 0
-              ? "Add images before training."
-              : `${imageCount - captionedCount} image${imageCount - captionedCount === 1 ? "" : "s"} still need captions.`}
+              ? t("Add images before training.")
+              : t("{count} images still need captions.", { count: imageCount - captionedCount })}
           </p>
         ) : !validationReady ? (
-          <p>Add at least one validation prompt.</p>
+          <p>{t("Add at least one validation prompt.")}</p>
         ) : null}
       </div>
     </section>
@@ -933,6 +938,7 @@ function TrainingPlan({
 }
 
 export function DatasetList() {
+  const { t } = useI18n();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [name, setName] = useState("");
@@ -974,9 +980,9 @@ export function DatasetList() {
     <>
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">Datasets</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("Datasets")}</h2>
           <span className="text-xs text-olive-500">
-            Create and manage training data
+            {t("Create and manage training data")}
           </span>
         </div>
         <button
@@ -984,13 +990,13 @@ export function DatasetList() {
           className="rounded-lg bg-olive-800 px-3 py-2 text-xs font-semibold text-white transition hover:bg-olive-700"
           {...createInteractions.getReferenceProps()}
         >
-          New dataset
+          {t("New dataset")}
         </button>
       </header>
 
       <section className="dataset-card-grid">
         {isLoading ? (
-          <p className="text-xs text-olive-500">Loading datasets…</p>
+          <p className="text-xs text-olive-500">{t("Loading datasets…")}</p>
         ) : datasets.length ? (
           datasets.map((dataset) => (
             <Link
@@ -1002,14 +1008,13 @@ export function DatasetList() {
                 {dataset.cover_path ? (
                   <img src={`${API}/files/${dataset.cover_path}`} alt="" />
                 ) : (
-                  <span>Empty dataset</span>
+                  <span>{t("Empty dataset")}</span>
                 )}
               </div>
               <div className="dataset-card-body">
                 <h3>{dataset.name}</h3>
                 <p>
-                  {dataset.image_count} image
-                  {dataset.image_count === 1 ? "" : "s"}
+                  {dataset.image_count} {t("images")}
                   <span aria-hidden="true"> · </span>
                   {new Date(`${dataset.created_at}Z`).toLocaleDateString()}
                 </p>
@@ -1018,9 +1023,9 @@ export function DatasetList() {
           ))
         ) : (
           <div className="dataset-card-empty">
-            <h3>No datasets yet</h3>
+            <h3>{t("No datasets yet")}</h3>
             <p>
-              Create your first dataset to upload and caption training images.
+              {t("Create your first dataset to upload and caption training images.")}
             </p>
           </div>
         )}
@@ -1041,16 +1046,16 @@ export function DatasetList() {
                 {...createInteractions.getFloatingProps()}
               >
                 <div>
-                  <h2 id="create-dataset-title">New dataset</h2>
-                  <p>Give this training image collection a clear name.</p>
+                  <h2 id="create-dataset-title">{t("New dataset")}</h2>
+                  <p>{t("Give this training image collection a clear name.")}</p>
                 </div>
                 <label>
-                  Name
+                  {t("Name")}
                   <input
                     autoFocus
                     value={name}
                     onChange={(event) => setName(event.target.value)}
-                    placeholder="Studio portraits"
+                    placeholder={t("Studio portraits")}
                   />
                 </label>
                 <div className="dataset-create-actions">
@@ -1061,13 +1066,13 @@ export function DatasetList() {
                       setCreateOpen(false);
                     }}
                   >
-                    Cancel
+                    {t("Cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={!name.trim() || create.isPending}
                   >
-                    {create.isPending ? "Creating…" : "Create dataset"}
+                    {create.isPending ? t("Creating…") : t("Create dataset")}
                   </button>
                 </div>
               </form>
@@ -1080,6 +1085,7 @@ export function DatasetList() {
 }
 
 export function DatasetDetail() {
+  const { t } = useI18n();
   const { id = "" } = useParams(),
     navigate = useNavigate(),
     queryClient = useQueryClient(),
@@ -1269,7 +1275,7 @@ export function DatasetDetail() {
     return () => window.removeEventListener("keydown", onKey);
   }, [selectedIndex, data]);
   if (isLoading || !data)
-    return <p className="text-xs text-olive-500">Loading dataset…</p>;
+    return <p className="text-xs text-olive-500">{t("Loading dataset…")}</p>;
   const captionState = store.captioning,
     inProgress =
       captionState.status === "started" || captionState.status === "progress";
@@ -1293,7 +1299,7 @@ export function DatasetDetail() {
                 to="/datasets"
                 className="shrink-0 text-xs font-semibold text-olive-700 hover:underline"
               >
-                Datasets
+                {t("Datasets")}
               </Link>
               <span className="text-xs text-olive-300">/</span>
               <h2 className="truncate text-2xl font-semibold tracking-tight">
@@ -1301,8 +1307,8 @@ export function DatasetDetail() {
               </h2>
             </div>
             <p className="dataset-header-stats">
-              <strong>{data.images.length}</strong> images ·{" "}
-              <strong>{captionedCount}</strong> captioned
+              <strong>{data.images.length}</strong> {t("images")} ·{" "}
+              <strong>{captionedCount}</strong> {t("captioned")}
             </p>
           </div>
           <div className="dataset-header-actions">
@@ -1319,10 +1325,10 @@ export function DatasetDetail() {
               <span>{selectedIds.size} selected</span>
               <ConfirmAction
                 danger
-                label="Delete"
-                title="Delete selected images?"
-                detail="Selected images, their sidecar caption files, and metadata will be permanently deleted."
-                confirmLabel={`Delete ${selectedIds.size}`}
+                label={t("Delete")}
+                title={t("Delete selected images?")}
+                detail={t("Selected images, their sidecar caption files, and metadata will be permanently deleted.")}
+                confirmLabel={`${t("Delete")} ${selectedIds.size}`}
                 onConfirm={() => removeImages.mutate()}
                 disabled={removeImages.isPending}
               />
@@ -1332,9 +1338,9 @@ export function DatasetDetail() {
               <button
                 className="dataset-upload-button"
                 aria-label={
-                  upload.isPending ? "Uploading images" : "Upload images"
+                  upload.isPending ? t("Uploading images") : t("Upload images")
                 }
-                title={upload.isPending ? "Uploading images" : "Upload images"}
+                title={upload.isPending ? t("Uploading images") : t("Upload images")}
                 onClick={() => filesRef.current?.click()}
               >
                 <svg
@@ -1389,8 +1395,8 @@ export function DatasetDetail() {
             <div className="flex justify-between font-semibold">
               <span>
                 {captionState.status === "error"
-                  ? "Captioning error"
-                  : "Captioning images"}
+                  ? t("Captioning error")
+                  : t("Captioning images")}
               </span>
               <span>
                 {captionState.current} / {captionState.total}
@@ -1411,7 +1417,7 @@ export function DatasetDetail() {
         {enqueueTraining.isSuccess && (
           <section className="actionbar mt-4">
             <div className="text-xs text-olive-500">
-              Training added to queue
+              {t("Training added to queue")}
             </div>
           </section>
         )}
@@ -1430,7 +1436,7 @@ export function DatasetDetail() {
                   src={`${API}/files/${image.path}`}
                 />
                 <p className="dataset-image-caption">
-                  <span>{image.caption || "No caption yet"}</span>
+                  <span>{image.caption || t("No caption yet")}</span>
                 </p>
               </button>
               <label className="absolute left-1 top-1 !m-0 rounded bg-white/90 p-1">
@@ -1445,7 +1451,7 @@ export function DatasetDetail() {
         </section>
       </main>
 
-      <aside className="dataset-aside" aria-label="Training settings">
+      <aside className="dataset-aside" aria-label={t("Training settings")}>
         <TrainingPlan
           imageCount={data.images.length}
           captionedCount={captionedCount}
@@ -1473,7 +1479,7 @@ export function DatasetDetail() {
                   className="font-semibold hover:text-olive-950"
                   onClick={() => setSelectedIndex(null)}
                 >
-                  Close · Esc
+                  {t("Close · Esc")}
                 </button>
               </div>
               <div className="relative aspect-video w-full overflow-hidden rounded-md bg-olive-200">
@@ -1492,7 +1498,7 @@ export function DatasetDetail() {
                     )
                   }
                 >
-                  ← Previous
+                  ← {t("Previous")}
                 </button>
                 <button
                   className="rounded-md border border-olive-200 bg-white px-3 py-1.5 text-xs text-olive-700 hover:bg-olive-50"
@@ -1500,14 +1506,14 @@ export function DatasetDetail() {
                     setSelectedIndex((selectedIndex! + 1) % data.images.length)
                   }
                 >
-                  Next →
+                  {t("Next")} →
                 </button>
               </div>
             </div>
             <aside className="flex min-h-0 flex-col p-3">
-              <h3 className="text-sm font-bold">Caption</h3>
+              <h3 className="text-sm font-bold">{t("Caption")}</h3>
               <p className="mt-1 text-[10px] text-olive-500">
-                Edit and save the sidecar .txt caption.
+                {t("Edit and save the sidecar .txt caption.")}
               </p>
               <textarea
                 className="mt-3 min-h-0 flex-1 resize-none rounded-md border border-olive-200 p-2 text-xs outline-none focus:border-olive-500"
@@ -1519,7 +1525,7 @@ export function DatasetDetail() {
                 disabled={saveCaption.isPending}
                 onClick={() => saveCaption.mutate()}
               >
-                {saveCaption.isPending ? "Saving…" : "Save caption"}
+                {saveCaption.isPending ? t("Saving…") : t("Save caption")}
               </button>
             </aside>
           </div>

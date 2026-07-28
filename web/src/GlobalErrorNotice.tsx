@@ -2,11 +2,13 @@ import { FloatingPortal } from "@floating-ui/react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "./store";
+import { useI18n } from "./i18n";
 
 export function GlobalErrorNotice() {
   const error = useStore((state) => state.globalError);
   const clearError = useStore((state) => state.clearError);
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!error) return;
@@ -27,8 +29,8 @@ export function GlobalErrorNotice() {
           !
         </div>
         <div className="min-w-0 flex-1">
-          <h2>{error.title}</h2>
-          <p>{error.message}</p>
+          <h2>{t(error.title)}</h2>
+          <p>{t(error.message)}</p>
           {error.action && (
             <button
               type="button"
@@ -37,14 +39,14 @@ export function GlobalErrorNotice() {
                 clearError();
               }}
             >
-              {error.action.label}
+              {t(error.action.label)}
             </button>
           )}
         </div>
         <button
           type="button"
           className="global-error-close"
-          aria-label="Dismiss error"
+          aria-label={t("Dismiss error")}
           onClick={clearError}
         >
           ×

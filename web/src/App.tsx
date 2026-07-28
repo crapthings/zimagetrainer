@@ -11,6 +11,8 @@ import {
 } from "react-router-dom";
 import { useStore } from "./store";
 import { DatasetDetail, DatasetList } from "./Datasets";
+import { Playground } from "./Playground";
+import { useI18n } from "./i18n";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { GlobalErrorNotice } from "./GlobalErrorNotice";
 import {
@@ -36,6 +38,7 @@ const nav = ({ isActive }: { isActive: boolean }) =>
 function Layout() {
   const s = useStore();
   const queryClient = useQueryClient();
+  const { t } = useI18n();
   useEffect(() => {
     const ws = new WebSocket(
       `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`,
@@ -112,19 +115,22 @@ function Layout() {
           <h1>Z-Forge</h1>
         </div>
         <nav className="mt-8 grid gap-1">
+          <NavLink className={nav} to="/playground">
+            {t("Playground")}
+          </NavLink>
           <NavLink className={nav} to="/datasets">
-            Datasets
+            {t("Datasets")}
           </NavLink>
           <NavLink className={nav} to="/training">
-            Training
+            {t("Training")}
           </NavLink>
           <NavLink className={nav} to="/settings">
-            Settings
+            {t("Settings")}
           </NavLink>
         </nav>
         <div className="app-sidebar-footer">
           <span className="app-status-dot" />
-          API online
+          {t("API online")}
         </div>
       </aside>
       <div className="app-body">
@@ -143,11 +149,12 @@ function LossChart({
   points: { step: number; loss: number }[];
   total: number;
 }) {
+  const { t } = useI18n();
   const values = points;
   if (values.length < 2)
     return (
       <div className="flex h-44 items-center justify-center text-xs text-olive-400">
-        Waiting for loss values…
+        {t("Waiting for loss values…")}
       </div>
     );
   const smoothingWindow = Math.max(
@@ -216,7 +223,7 @@ function LossChart({
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label="Training loss chart"
+        aria-label={t("Training loss chart")}
       >
         {xTicks.map((tick) => {
           const x = padLeft + (tick / Math.max(1, total)) * chartWidth;
@@ -276,7 +283,7 @@ function LossChart({
         })}
       </div>
       </div>
-      <div className="loss-chart-x-ticks" aria-label="Training steps">
+      <div className="loss-chart-x-ticks" aria-label={t("Training steps")}>
         {xTicks.map((tick) => (
           <span key={tick}>{tick.toLocaleString()}</span>
         ))}
@@ -591,61 +598,61 @@ const stageLabels: Record<string, string> = {
   "running first backward pass": "Running the first backward pass",
 };
 
-function eventPresentation(event: TimelineEvent) {
+function eventPresentation(event: TimelineEvent, t: (key: string) => string) {
   if (event.type === "stage")
     return {
       icon: "●",
       tone: "active",
-      title: stageLabels[event.stage ?? ""] ?? event.stage ?? "Preparing training",
-      detail: "Setup",
+      title: t(stageLabels[event.stage ?? ""] ?? event.stage ?? "Preparing training"),
+      detail: t("Setup"),
     };
   if (event.type === "checkpoint" && event.status === "saved")
     return {
       icon: "✓",
       tone: "success",
-      title: `Checkpoint saved at step ${event.step?.toLocaleString()}`,
+      title: `${t("Checkpoint saved at step")} ${event.step?.toLocaleString()}`,
       detail: event.path,
     };
   if (event.type === "checkpoint")
     return {
       icon: "−",
       tone: "muted",
-      title: "Older checkpoints removed",
+      title: t("Older checkpoints removed"),
       detail: event.paths?.join(", "),
     };
   if (event.type === "sample" && event.status === "starting")
     return {
       icon: "◐",
       tone: "active",
-      title: "Generating validation images",
-      detail: "Validation",
+      title: t("Generating validation images"),
+      detail: t("Validation"),
     };
   if (event.type === "sample")
     return {
       icon: "▣",
       tone: "success",
-      title: "Validation image generated",
+      title: t("Validation image generated"),
       detail: event.path?.split("/").at(-1),
     };
   if (event.status === "completed")
     return {
       icon: "✓",
       tone: "success",
-      title: "Training completed",
-      detail: "Run finished successfully",
+      title: t("Training completed"),
+      detail: t("Run finished successfully"),
     };
   if (event.status === "failed")
     return {
       icon: "!",
       tone: "danger",
-      title: "Training stopped with an error",
-      detail: "Open raw output for details",
+      title: t("Training stopped with an error"),
+      detail: t("Open raw output for details"),
     };
   return {
     icon: "●",
     tone: "active",
-    title: event.status === "queued" ? "Training queued" : "Training started",
-    detail: "Run",
+    title: t(event.status === "queued" ? "Training queued" : "Training started"),
+    detail: t("Run"),
   };
 }
 
@@ -653,7 +660,7 @@ function runDate(value: string) {
   return new Date(`${value}Z`);
 }
 
-function runDateGroup(value: string) {
+function runDateGroup(value: string, t?: (key: string) => string) {
   const date = runDate(value);
   const today = new Date();
   const yesterday = new Date();
@@ -662,8 +669,8 @@ function runDateGroup(value: string) {
     left.getFullYear() === right.getFullYear() &&
     left.getMonth() === right.getMonth() &&
     left.getDate() === right.getDate();
-  if (sameDay(date, today)) return "Today";
-  if (sameDay(date, yesterday)) return "Yesterday";
+  if (sameDay(date, today)) return t?.("Today") ?? "Today";
+  if (sameDay(date, yesterday)) return t?.("Yesterday") ?? "Yesterday";
   return date.toLocaleDateString([], {
     year: "numeric",
     month: "long",
@@ -680,6 +687,7 @@ function TrainingRunSelect({
   value?: string;
   onChange: (id: string) => void;
 }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const selected = jobs.find(([id]) => id === value);
@@ -701,13 +709,13 @@ function TrainingRunSelect({
   const normalizedSearch = search.trim().toLocaleLowerCase();
   const filtered = jobs.filter(([id, job]) => {
     const date = runDate(job.created_at);
-    return `${id} ${job.status} ${date.toLocaleString()} ${runDateGroup(job.created_at)}`
+    return `${id} ${job.status} ${date.toLocaleString()} ${runDateGroup(job.created_at, t)}`
       .toLocaleLowerCase()
       .includes(normalizedSearch);
   });
   const groups = filtered.reduce(
     (result, item) => {
-      const label = runDateGroup(item[1].created_at);
+      const label = runDateGroup(item[1].created_at, t);
       const existing = result.find((group) => group.label === label);
       if (existing) existing.items.push(item);
       else result.push({ label, items: [item] });
@@ -721,12 +729,12 @@ function TrainingRunSelect({
       <button
         ref={floating.refs.setReference}
         className="training-run-trigger"
-        aria-label="Select training run"
+        aria-label={t("Select training run")}
         {...interactions.getReferenceProps()}
       >
         <span className={`run-status-dot run-status-${selected?.[1].status}`} />
         <span>
-          <strong className="capitalize">{selected?.[1].status ?? "Select run"}</strong>
+          <strong className="capitalize">{selected ? t(selected[1].status) : t("Select run")}</strong>
           {selected && (
             <small>{runDate(selected[1].created_at).toLocaleString()}</small>
           )}
@@ -753,8 +761,8 @@ function TrainingRunSelect({
                   autoFocus
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search runs"
-                  aria-label="Search training runs"
+                  placeholder={t("Search runs")}
+                  aria-label={t("Search training runs")}
                 />
               </div>
               <div className="training-run-options">
@@ -774,7 +782,7 @@ function TrainingRunSelect({
                         >
                           <span className={`run-status-dot run-status-${job.status}`} />
                           <span>
-                            <strong className="capitalize">{job.status}</strong>
+                            <strong className="capitalize">{t(job.status)}</strong>
                             <small>{id}</small>
                           </span>
                           <time>
@@ -788,7 +796,7 @@ function TrainingRunSelect({
                     </section>
                   ))
                 ) : (
-                  <p className="training-run-no-results">No matching runs</p>
+                  <p className="training-run-no-results">{t("No matching runs")}</p>
                 )}
               </div>
             </div>
@@ -802,6 +810,7 @@ function TrainingRunSelect({
 function TrainingMonitor() {
   const s = useStore();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { runId } = useParams<{ runId: string }>();
   const [view, setView] = useState<"monitor" | "raw">("monitor");
   const { data = { jobs: {} } } = useQuery({
@@ -874,8 +883,8 @@ function TrainingMonitor() {
     <>
       <header className="training-header">
         <div>
-          <h2 className="text-2xl font-semibold tracking-tight">Training</h2>
-          <span className="text-xs text-olive-500">Monitor runs and outputs</span>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("Training")}</h2>
+          <span className="text-xs text-olive-500">{t("Monitor runs and outputs")}</span>
         </div>
         <div className="training-header-actions">
           {jobs.length > 0 && (
@@ -890,23 +899,23 @@ function TrainingMonitor() {
 
       {!activeId ? (
         <div className="training-empty">
-          No training runs yet. Start one from a dataset when it is ready.
-          <Link to="/datasets">Open datasets</Link>
+          {t("No training runs yet. Start one from a dataset when it is ready.")}
+          <Link to="/datasets">{t("Open datasets")}</Link>
         </div>
       ) : (
         <div className="training-monitor">
-          <nav className="training-view-tabs" aria-label="Training view">
+          <nav className="training-view-tabs" aria-label={t("Training")}>
             <button
               className={view === "monitor" ? "training-view-tab-active" : ""}
               onClick={() => setView("monitor")}
             >
-              Monitor
+              {t("Monitor")}
             </button>
             <button
               className={view === "raw" ? "training-view-tab-active" : ""}
               onClick={() => setView("raw")}
             >
-              Raw output
+              {t("Raw output")}
               <span>{logLines.length}</span>
             </button>
           </nav>
@@ -916,16 +925,16 @@ function TrainingMonitor() {
               <section className="training-statusbar">
                 <div className="training-run-status">
                   <span className={`run-status-dot run-status-${status}`} />
-                  <strong className="capitalize">{status}</strong>
-                  <span className="training-run-id" title={`Run ID: ${activeId}`}>
-                    <span>Run ID</span>
+                  <strong className="capitalize">{t(status)}</strong>
+                  <span className="training-run-id" title={`${t("Run ID")}: ${activeId}`}>
+                    <span>{t("Run ID")}</span>
                     <code>{activeId}</code>
                   </span>
                 </div>
                 <span>
                   {["running", "sampling"].includes(status) && stage
-                    ? stageLabels[stage] ?? stage
-                    : selectedJob?.error ?? "Run output is up to date"}
+                    ? t(stageLabels[stage] ?? stage)
+                    : t(selectedJob?.error ?? "Run output is up to date")}
                 </span>
               </section>
 
@@ -936,30 +945,30 @@ function TrainingMonitor() {
                   </div>
                   <div className="training-section-heading">
                     <div>
-                      <h3>Training loss</h3>
-                      <p>Smoothed loss across the full configured step range</p>
+                      <h3>{t("Training loss")}</h3>
+                      <p>{t("Smoothed loss across the full configured step range")}</p>
                     </div>
-                    <span>{progress}% complete</span>
+                    <span>{progress}% {t("complete")}</span>
                   </div>
                   <div className="training-metrics">
                     <div>
-                      <span>Current step</span>
+                      <span>{t("Current step")}</span>
                       <strong>{step.toLocaleString()}</strong>
                     </div>
                     <div>
-                      <span>Max steps</span>
+                      <span>{t("Max steps")}</span>
                       <strong>{total.toLocaleString()}</strong>
                     </div>
                     <div>
-                      <span>Current loss</span>
+                      <span>{t("Current loss")}</span>
                       <strong>{loss?.toFixed(5) ?? "—"}</strong>
                     </div>
                     <div>
-                      <span>Recent trend</span>
+                      <span>{t("Recent trend")}</span>
                       <strong
                         className={`loss-trend loss-trend-${lossTrend.toLowerCase()}`}
                       >
-                        {lossTrend}
+                        {t(lossTrend)}
                       </strong>
                     </div>
                   </div>
@@ -968,8 +977,8 @@ function TrainingMonitor() {
                 <section className="training-events">
                   <div className="training-section-heading">
                     <div>
-                      <h3>Important events</h3>
-                      <p>Readable milestones from the training process</p>
+                      <h3>{t("Important events")}</h3>
+                      <p>{t("Readable milestones from the training process")}</p>
                     </div>
                   </div>
                   {timeline.length ? (
@@ -987,7 +996,7 @@ function TrainingMonitor() {
                         .slice(-30)
                         .reverse()
                         .map((event, index) => {
-                          const item = eventPresentation(event);
+                          const item = eventPresentation(event, t);
                           return (
                             <li key={`${event.created_at}-${index}`}>
                               <span
@@ -1013,8 +1022,7 @@ function TrainingMonitor() {
                     </ol>
                   ) : (
                     <p className="training-section-empty">
-                      Events will appear as the run prepares, saves checkpoints,
-                      and generates validation images.
+                      {t("Events will appear as the run prepares, saves checkpoints, and generates validation images.")}
                     </p>
                   )}
                 </section>
@@ -1024,8 +1032,8 @@ function TrainingMonitor() {
                 <section className="training-validation">
                   <div className="training-section-heading">
                     <div>
-                      <h3>Validation images</h3>
-                      <p>Compare generated samples across checkpoints</p>
+                      <h3>{t("Validation images")}</h3>
+                      <p>{t("Compare generated samples across checkpoints")}</p>
                     </div>
                     <span>{samples.length}</span>
                   </div>
@@ -1044,7 +1052,7 @@ function TrainingMonitor() {
                     </div>
                   ) : (
                     <p className="training-section-empty">
-                      Generated validation images will appear here.
+                      {t("Generated validation images will appear here.")}
                     </p>
                   )}
                 </section>
@@ -1054,13 +1062,13 @@ function TrainingMonitor() {
             <section className="training-output training-output-tab">
               <div className="training-section-heading">
                 <div>
-                  <h3>Raw output</h3>
-                  <p>Original command-line output for diagnosis and detail</p>
+                  <h3>{t("Raw output")}</h3>
+                  <p>{t("Original command-line output for diagnosis and detail")}</p>
                 </div>
                 <span>{logLines.length} lines</span>
               </div>
               <pre>
-                {logLines.join("\n") || "No output was captured for this run."}
+                {logLines.join("\n") || t("No output was captured for this run.")}
               </pre>
             </section>
           )}
@@ -1073,21 +1081,28 @@ function TrainingMonitor() {
 function Settings() {
   const s = useStore();
   const [saved, setSaved] = useState(false);
+  const { language, setLanguage, t } = useI18n();
   return (
     <>
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
-        <span className="text-xs text-olive-500">Local preferences</span>
+        <h2 className="text-2xl font-semibold tracking-tight">{t("Settings")}</h2>
+        <span className="text-xs text-olive-500">{t("Local preferences")}</span>
       </header>
+      <section className="panel mt-4 max-w-xl">
+        <h3>{t("Language")}</h3>
+        <p className="mt-2 text-sm text-olive-500">{t("Interface language")}</p>
+        <div className="mt-4 inline-flex rounded-lg border border-olive-200 bg-olive-50 p-1">
+          <button type="button" className={`rounded-md px-3 py-1.5 text-xs font-semibold ${language === "en" ? "bg-white text-olive-900 shadow-sm" : "text-olive-600"}`} onClick={() => setLanguage("en")}>{t("English")}</button>
+          <button type="button" className={`rounded-md px-3 py-1.5 text-xs font-semibold ${language === "zh" ? "bg-white text-olive-900 shadow-sm" : "text-olive-600"}`} onClick={() => setLanguage("zh")}>{t("Chinese")}</button>
+        </div>
+      </section>
       <section className="panel mt-4 max-w-xl">
         <h3>Google AI Studio</h3>
         <p className="mt-2 text-sm text-olive-500">
-          This key is used for Gemini image captioning and stored only in this
-          browser's local storage. It is never sent to SQLite, project files, or
-          server logs.
+          {t("This key is used for Gemini image captioning and stored only in this browser's local storage. It is never sent to SQLite, project files, or server logs.")}
         </p>
         <label className="mt-6">
-          API key
+          {t("API key")}
           <input
             className={field}
             type="password"
@@ -1105,7 +1120,7 @@ function Settings() {
             className="rounded-lg bg-olive-600 px-4 py-2 text-sm font-semibold text-white"
             onClick={() => setSaved(true)}
           >
-            Use this key
+            {t("Use this key")}
           </button>
           <button
             className="secondary !mt-0 !w-auto"
@@ -1114,11 +1129,11 @@ function Settings() {
               setSaved(false);
             }}
           >
-            Clear
+            {t("Clear")}
           </button>
           {saved && (
             <span className="text-sm text-emerald-700">
-              Key saved in this browser.
+              {t("Key saved in this browser.")}
             </span>
           )}
         </div>
@@ -1132,6 +1147,8 @@ export default function App() {
     <>
       <Routes>
         <Route element={<Layout />}>
+          <Route path="/" element={<Navigate to="/playground" replace />} />
+          <Route path="/playground" element={<Playground />} />
           <Route path="/training" element={<TrainingMonitor />} />
           <Route path="/training/:runId" element={<TrainingMonitor />} />
           <Route path="/datasets" element={<DatasetList />} />
@@ -1146,7 +1163,7 @@ export default function App() {
           />
           <Route path="/jobs" element={<Navigate to="/training" replace />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="*" element={<Navigate to="/training" replace />} />
+          <Route path="*" element={<Navigate to="/playground" replace />} />
         </Route>
       </Routes>
       <GlobalErrorNotice />

@@ -11,6 +11,7 @@ import "./styles.css";
 import App from "./App";
 import { FriendlyError } from "./errors";
 import { useStore } from "./store";
+import { I18nProvider } from "./i18n";
 
 const showGlobalError = (error: unknown) => {
   const friendly = error instanceof FriendlyError ? error : null;
@@ -27,9 +28,11 @@ const queryClient = new QueryClient({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
+      <I18nProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </I18nProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { Language } from "./i18n";
 
 export type Training = {
   status: string;
@@ -29,6 +30,7 @@ type State = {
   folder: string;
   apiKey: string;
   model: string;
+  language: Language;
   images: { path: string; caption: string }[];
   captioning: Captioning;
   training: Training;
@@ -44,6 +46,7 @@ export const useStore = create<State>()(
       folder: "data/train",
       apiKey: "",
       model: "gemini-3.5-flash-lite",
+      language: "en",
       images: [],
       captioning: { status: "idle", current: 0, total: 0 },
       training: {
@@ -68,7 +71,7 @@ export const useStore = create<State>()(
     }),
     {
       name: "zimage-trainer-settings",
-      partialize: (state) => ({ apiKey: state.apiKey, model: state.model }),
+      partialize: (state) => ({ apiKey: state.apiKey, model: state.model, language: state.language }),
     },
   ),
 );
