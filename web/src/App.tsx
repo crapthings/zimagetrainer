@@ -660,6 +660,16 @@ function runDate(value: string) {
   return new Date(`${value}Z`);
 }
 
+function checkpointForValidationSample(path: string, available: string[] = []) {
+  const match = path.match(
+    /^outputs\/([^/]+)\/([a-z0-9]+)_lora\/samples\/step_(\d+)\.png$/,
+  );
+  if (!match) return null;
+  const [, datasetId, jobId, rawStep] = match;
+  const checkpoint = `outputs/${datasetId}/${jobId}_lora/zimage_lora_step_${Number(rawStep)}.safetensors`;
+  return available.includes(checkpoint) ? checkpoint : null;
+}
+
 function runDateGroup(value: string, t?: (key: string) => string) {
   const date = runDate(value);
   const today = new Date();
@@ -1039,16 +1049,22 @@ function TrainingMonitor() {
                   </div>
                   {samples.length ? (
                     <div className="training-sample-grid">
-                      {samples.slice(-8).map((path: string) => (
-                        <a
-                          key={path}
-                          href={`${API}/files/${path}`}
-                          target="_blank"
-                        >
-                          <img src={`${API}/files/${path}`} alt="" />
-                          <span>{path.split("/").at(-1)}</span>
-                        </a>
-                      ))}
+                      {samples.slice(-8).map((path: string) => {
+                        const checkpoint = checkpointForValidationSample(path, monitor?.checkpoints ?? []);
+                        return (
+                          <div className="training-sample-card" key={path}>
+                            <a href={`${API}/files/${path}`} target="_blank">
+                              <img src={`${API}/files/${path}`} alt="" />
+                              <span>{path.split("/").at(-1)}</span>
+                            </a>
+                            {checkpoint && (
+                              <Link to={`/playground?lora=${encodeURIComponent(checkpoint)}`}>
+                                {t("Use in Playground")}
+                              </Link>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="training-section-empty">

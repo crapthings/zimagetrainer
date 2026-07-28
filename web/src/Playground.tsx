@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   autoUpdate,
   flip,
@@ -12,7 +12,8 @@ import {
   useInteractions,
   useRole,
 } from "@floating-ui/react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { API } from "./App";
 import { useI18n } from "./i18n";
 
@@ -20,6 +21,7 @@ type Lora = {
   path: string;
   job_id: string;
   dataset_id: string;
+  dataset_name: string;
   step: number;
   status: string;
 };
@@ -32,6 +34,9 @@ type Generation = {
   size: string;
   steps: number;
   lora_path: string | null;
+  width: number;
+  height: number;
+  created_at: string;
 };
 
 type GenerationRequest = {
@@ -69,7 +74,7 @@ function LoraPicker({ value, onChange, options }: { value: string | null; onChan
   const selected = options.find((option) => option.path === value);
   const grouped = useMemo(() => {
     return options.reduce<Record<string, Lora[]>>((groups, option) => {
-      const key = option.dataset_id;
+      const key = option.dataset_name;
       (groups[key] ??= []).push(option);
       return groups;
     }, {});
@@ -94,7 +99,7 @@ function LoraPicker({ value, onChange, options }: { value: string | null; onChan
               </button>
               {Object.entries(grouped).map(([datasetId, loras]) => (
                 <div key={datasetId} className="playground-lora-group">
-                  <p>{t("Dataset")} {datasetId}</p>
+                  <p>{datasetId}</p>
                   {loras.map((option) => (
                     <button key={option.path} type="button" className={`playground-lora-option ${value === option.path ? "is-selected" : ""}`} onClick={() => { onChange(option.path); setOpen(false); }}>
                       <span><strong>{t("Run")} {option.job_id} · {t("step")} {option.step}</strong><small>{option.status}</small></span>
@@ -114,12 +119,14 @@ function LoraPicker({ value, onChange, options }: { value: string | null; onChan
 
 export function Playground() {
   const { t } = useI18n();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
   const [prompt, setPrompt] = useState("");
   const [size, setSize] = useState("1024x1024");
   const [seed, setSeed] = useState("42");
   const [steps, setSteps] = useState("9");
   const [loraPath, setLoraPath] = useState<string | null>(null);
-  const [history, setHistory] = useState<Generation[]>([]);
+  const [selectedGenerationId, setSelectedGenerationId] = useState<string>();
   const { data } = useQuery<{ loras: Lora[] }>({
     queryKey: ["playground-loras"],
     queryFn: async () => {
@@ -128,6 +135,26 @@ export function Playground() {
       return response.json();
     },
   });
+  const { data: generationData } = useQuery<{ generations: Generation[] }>({
+    queryKey: ["playground-generations"],
+    queryFn: async () => {
+      const response = await fetch(`${API}/api/playground/generations`);
+      if (!response.ok) throw new Error("Could not load generation history.");
+      return response.json();
+    },
+  });
+  const history = useMemo(
+    () => (generationData?.generations ?? []).map((generation) => ({
+      ...generation,
+      size: `${generation.width}x${generation.height}`,
+    })),
+    [generationData],
+  );
+  useEffect(() => {
+    const checkpoint = searchParams.get("lora");
+    if (checkpoint && data?.loras.some((option) => option.path === checkpoint))
+      setLoraPath(checkpoint);
+  }, [data?.loras, searchParams]);
   const generate = useMutation({
     mutationFn: async (payload: GenerationRequest) => {
       const { size: _size, ...request } = payload;
@@ -140,9 +167,23 @@ export function Playground() {
       if (!response.ok) throw new Error(body.detail ?? "Could not generate an image.");
       return { ...body, ...payload } as Generation;
     },
-    onSuccess: (generation) => setHistory((previous) => [generation, ...previous.filter((item) => item.id !== generation.id)].slice(0, 8)),
+    onSuccess: (generation) => {
+      setSelectedGenerationId(generation.id);
+      queryClient.setQueryData<{ generations: Generation[] }>(
+        ["playground-generations"],
+        (current) => ({
+          generations: [
+            generation,
+            ...(current?.generations ?? []).filter(
+              (item) => item.id !== generation.id,
+            ),
+          ].slice(0, 60),
+        }),
+      );
+      queryClient.invalidateQueries({ queryKey: ["playground-generations"] });
+    },
   });
-  const latest = history[0];
+  const latest = history.find((generation) => generation.id === selectedGenerationId) ?? history[0];
 
   return (
     <div className="playground-page">
@@ -165,7 +206,7 @@ export function Playground() {
           </div>
           <section className="playground-history" aria-label="Recent generations">
             <div><h3>{t("Recent")}</h3><span>{history.length ? `${history.length} generation${history.length === 1 ? "" : "s"}` : t("Nothing generated yet")}</span></div>
-            {history.length > 0 && <div className="playground-history-list">{history.map((item) => <button key={item.id} type="button" aria-label={`Restore generation ${item.id}`} onClick={() => { setPrompt(item.prompt); setSize(item.size); setSeed(String(item.seed)); setSteps(String(item.steps)); setLoraPath(item.lora_path); setHistory([item, ...history.filter((candidate) => candidate.id !== item.id)]); }}><img src={`/files/${item.path}`} alt={`Generation ${item.id}`} /></button>)}</div>}
+            {history.length > 0 && <div className="playground-history-list">{history.map((item) => <button key={item.id} type="button" aria-label={`Restore generation ${item.id}`} onClick={() => { setPrompt(item.prompt); setSize(item.size); setSeed(String(item.seed)); setSteps(String(item.steps)); setLoraPath(item.lora_path); setSelectedGenerationId(item.id); }}><img src={`/files/${item.path}`} alt={`Generation ${item.id}`} /></button>)}</div>}
           </section>
         </section>
       </div>

@@ -11,6 +11,7 @@ import shutil
 import subprocess
 import sys
 import uuid
+from datetime import datetime
 from statistics import median
 from pathlib import Path
 from typing import Any
@@ -397,6 +398,7 @@ def playground_loras() -> list[dict[str, Any]]:
             continue
         dataset_id, job_id, step = match.groups()
         job = jobs.get(job_id, {})
+        dataset = database.dataset(dataset_id)
         rank, alpha = 16, 16.0
         config_ref = job.get("config")
         if isinstance(config_ref, str):
@@ -414,6 +416,7 @@ def playground_loras() -> list[dict[str, Any]]:
             "path": relative,
             "job_id": job_id,
             "dataset_id": dataset_id,
+            "dataset_name": dataset["name"] if dataset else dataset_id,
             "step": int(step),
             "status": job.get("status", "unknown"),
             "rank": rank,
@@ -427,8 +430,36 @@ async def list_playground_loras() -> dict[str, Any]:
     return {"loras": playground_loras()}
 
 
+def import_legacy_playground_generations() -> None:
+    """Make images created before generation history available in the UI."""
+    for image_path in (ROOT / "outputs" / "playground").glob("*.png"):
+        try:
+            with PILImage.open(image_path) as image:
+                width, height = image.size
+            created_at = datetime.fromtimestamp(image_path.stat().st_mtime).strftime("%Y-%m-%d %H:%M:%S")
+        except OSError:
+            continue
+        database.import_generation({
+            "id": image_path.stem,
+            "path": image_path.relative_to(ROOT).as_posix(),
+            "prompt": "Imported image from an earlier Playground session. Generation settings were not recorded.",
+            "width": width,
+            "height": height,
+            "seed": 0,
+            "steps": 9,
+            "lora_path": None,
+            "created_at": created_at,
+        })
+
+
+@app.get("/api/playground/generations")
+async def list_playground_generations() -> dict[str, Any]:
+    import_legacy_playground_generations()
+    return {"generations": database.generations()}
+
+
 @app.post("/api/playground/generate")
-async def generate_playground_image(request: GenerateRequest) -> dict[str, str | int]:
+async def generate_playground_image(request: GenerateRequest) -> dict[str, Any]:
     global inference_running
     if any(job["status"] in {"queued", "running"} for job in database.jobs().values()):
         raise HTTPException(409, "A training run is using the GPU. Wait for it to finish before generating an image.")
@@ -469,7 +500,17 @@ async def generate_playground_image(request: GenerateRequest) -> dict[str, str |
             if result.returncode:
                 detail = (result.stderr or result.stdout or "Image generation failed.").strip().splitlines()[-1]
                 raise HTTPException(500, detail)
-            return {"id": generation_id, "path": output.relative_to(ROOT).as_posix(), "seed": request.seed}
+            generation = {
+                "id": generation_id,
+                "path": output.relative_to(ROOT).as_posix(),
+                "prompt": request.prompt,
+                "width": request.width,
+                "height": request.height,
+                "seed": request.seed,
+                "steps": request.steps,
+                "lora_path": request.lora_path,
+            }
+            return database.create_generation(generation)
         finally:
             inference_running = False
 
@@ -479,6 +520,9 @@ async def job_monitor(job_id: str) -> dict[str, Any]:
     monitor = database.job_monitor(job_id)
     if not monitor:
         raise HTTPException(404, "Job not found")
+    monitor["checkpoints"] = [
+        option["path"] for option in playground_loras() if option["job_id"] == job_id
+    ]
     return monitor
 
 

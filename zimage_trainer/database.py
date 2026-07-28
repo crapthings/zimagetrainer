@@ -53,6 +53,17 @@ class Database:
                     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(dataset_id) REFERENCES datasets(id)
                 );
+                CREATE TABLE IF NOT EXISTS generations (
+                    id TEXT PRIMARY KEY,
+                    path TEXT NOT NULL UNIQUE,
+                    prompt TEXT NOT NULL,
+                    width INTEGER NOT NULL,
+                    height INTEGER NOT NULL,
+                    seed INTEGER NOT NULL,
+                    steps INTEGER NOT NULL,
+                    lora_path TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                );
             """)
 
     def create_job(self, job_id: str, config: dict[str, Any], config_path: str) -> None:
@@ -127,6 +138,35 @@ class Database:
     def add_event(self, event: dict[str, Any]) -> None:
         with self.lock, self.connection:
             self.connection.execute("INSERT INTO events (job_id, event_json) VALUES (?, ?)", (event.get("jobId"), json.dumps(event)))
+
+    def create_generation(self, generation: dict[str, Any]) -> dict[str, Any]:
+        with self.lock, self.connection:
+            self.connection.execute(
+                """INSERT INTO generations (id, path, prompt, width, height, seed, steps, lora_path)
+                   VALUES (:id, :path, :prompt, :width, :height, :seed, :steps, :lora_path)""",
+                generation,
+            )
+            row = self.connection.execute(
+                "SELECT * FROM generations WHERE id = ?", (generation["id"],)
+            ).fetchone()
+        return dict(row)  # type: ignore[arg-type]
+
+    def generations(self, limit: int = 60) -> list[dict[str, Any]]:
+        with self.lock:
+            rows = self.connection.execute(
+                "SELECT * FROM generations ORDER BY created_at DESC, rowid DESC LIMIT ?", (limit,)
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def import_generation(self, generation: dict[str, Any]) -> None:
+        """Backfill a pre-history image without overwriting an existing record."""
+        with self.lock, self.connection:
+            self.connection.execute(
+                """INSERT OR IGNORE INTO generations
+                   (id, path, prompt, width, height, seed, steps, lora_path, created_at)
+                   VALUES (:id, :path, :prompt, :width, :height, :seed, :steps, :lora_path, :created_at)""",
+                generation,
+            )
 
     def create_dataset(self, dataset_id: str, name: str, folder: str) -> dict[str, Any]:
         with self.lock, self.connection:

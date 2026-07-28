@@ -24,6 +24,30 @@ class DatabaseSchemaTests(TestCase):
                 }
                 self.assertIn("system_prompt", dataset_columns)
                 self.assertIn("caption_model", dataset_columns)
+                self.assertIn("generations", tables)
                 self.assertNotIn("dataset_images", tables)
+            finally:
+                database.connection.close()
+
+    def test_generation_history_uses_stable_newest_first_ordering(self):
+        with TemporaryDirectory() as directory:
+            database = Database(Path(directory) / "state.db")
+            try:
+                for generation_id in ("first", "second"):
+                    database.create_generation(
+                        {
+                            "id": generation_id,
+                            "path": f"outputs/playground/{generation_id}.png",
+                            "prompt": "test",
+                            "width": 1024,
+                            "height": 1024,
+                            "seed": 42,
+                            "steps": 9,
+                            "lora_path": None,
+                        }
+                    )
+                history = database.generations()
+                self.assertEqual([item["id"] for item in history], ["second", "first"])
+                self.assertTrue(history[0]["created_at"])
             finally:
                 database.connection.close()

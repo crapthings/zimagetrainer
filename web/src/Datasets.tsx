@@ -73,6 +73,82 @@ const validationResolutionGroups: {
     ],
   },
 ];
+const trainingAspectRatios = [1, 4 / 3, 3 / 4, 3 / 2, 2 / 3, 16 / 9, 9 / 16];
+
+function TrainingCropPreview({
+  src,
+  resolution,
+}: {
+  src: string;
+  resolution: number;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const image = new Image();
+    let disposed = false;
+    const draw = () => {
+      if (disposed) return;
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      if (!width || !height || !image.naturalWidth || !image.naturalHeight) return;
+      const pixelRatio = window.devicePixelRatio || 1;
+      canvas.width = Math.round(width * pixelRatio);
+      canvas.height = Math.round(height * pixelRatio);
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      context.clearRect(0, 0, width, height);
+      const scale = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+      const drawWidth = image.naturalWidth * scale;
+      const drawHeight = image.naturalHeight * scale;
+      const drawX = (width - drawWidth) / 2;
+      const drawY = (height - drawHeight) / 2;
+      context.drawImage(image, drawX, drawY, drawWidth, drawHeight);
+      const sourceRatio = image.naturalWidth / image.naturalHeight;
+      const cropRatio = trainingAspectRatios.reduce((closest, candidate) =>
+        Math.abs(Math.log(sourceRatio / candidate)) < Math.abs(Math.log(sourceRatio / closest))
+          ? candidate
+          : closest,
+      );
+      // Keep this in lockstep with CaptionedImageFolder._target_size(). The
+      // 16-pixel alignment slightly changes the effective bucket ratio.
+      const targetWidth = Math.max(
+        16,
+        Math.round(Math.sqrt(resolution ** 2 * cropRatio) / 16) * 16,
+      );
+      const targetHeight = Math.max(
+        16,
+        Math.round(Math.sqrt(resolution ** 2 / cropRatio) / 16) * 16,
+      );
+      const targetRatio = targetWidth / targetHeight;
+      const cropWidth = sourceRatio > targetRatio ? drawHeight * targetRatio : drawWidth;
+      const cropHeight = sourceRatio > targetRatio ? drawHeight : drawWidth / targetRatio;
+      const cropX = drawX + (drawWidth - cropWidth) / 2;
+      const cropY = drawY + (drawHeight - cropHeight) / 2;
+      context.fillStyle = "rgba(31, 41, 35, 0.5)";
+      context.fillRect(drawX, drawY, cropX - drawX, drawHeight);
+      context.fillRect(cropX + cropWidth, drawY, drawX + drawWidth - (cropX + cropWidth), drawHeight);
+      context.fillRect(cropX, drawY, cropWidth, cropY - drawY);
+      context.fillRect(cropX, cropY + cropHeight, cropWidth, drawY + drawHeight - (cropY + cropHeight));
+      context.strokeStyle = "rgba(255, 255, 255, 0.96)";
+      context.lineWidth = 1.5;
+      context.strokeRect(cropX, cropY, cropWidth, cropHeight);
+    };
+    image.onload = draw;
+    image.src = src;
+    const observer = new ResizeObserver(draw);
+    observer.observe(canvas);
+    return () => {
+      disposed = true;
+      observer.disconnect();
+    };
+  }, [resolution, src]);
+
+  return <canvas ref={canvasRef} className="dataset-training-crop-preview" aria-hidden="true" />;
+}
 type TrainingParams = {
   resolution: number;
   rank: number;
@@ -552,12 +628,14 @@ function TrainingPlan({
   captionedCount,
   suggestion,
   onQueue,
+  onResolutionChange,
   queuing,
 }: {
   imageCount: number;
   captionedCount: number;
   suggestion?: Suggestion;
   onQueue: (params: TrainingParams) => void;
+  onResolutionChange: (resolution: number) => void;
   queuing: boolean;
 }) {
   const { t } = useI18n();
@@ -597,6 +675,7 @@ function TrainingPlan({
               ],
       }));
   }, [suggestion?.reason]);
+  useEffect(() => onResolutionChange(params.resolution), [onResolutionChange, params.resolution]);
   const applyPreset = (next: "recommended" | "quick") => {
     setPreset(next);
     const plan =
@@ -1095,7 +1174,9 @@ export function DatasetDetail() {
     [model, setModel] = useState("gemini-3.5-flash-lite"),
     [selectedIndex, setSelectedIndex] = useState<number | null>(null),
     [captionText, setCaptionText] = useState(""),
-    [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    [selectedIds, setSelectedIds] = useState<Set<string>>(new Set()),
+    [showCropPreview, setShowCropPreview] = useState(false),
+    [cropPreviewResolution, setCropPreviewResolution] = useState(1024);
   const { data, isLoading } = useQuery({
     queryKey: ["dataset", id],
     queryFn: () => getDataset(id),
@@ -1369,6 +1450,14 @@ export function DatasetDetail() {
                   e.target.files && upload.mutate(e.target.files)
                 }
               />
+              <button
+                type="button"
+                className={`dataset-crop-preview-toggle ${showCropPreview ? "is-active" : ""}`}
+                aria-pressed={showCropPreview}
+                onClick={() => setShowCropPreview((visible) => !visible)}
+              >
+                {showCropPreview ? t("Hide crop") : t("Preview crop")}
+              </button>
             </div>
           )}
           <div className="dataset-caption-tools">
@@ -1431,10 +1520,17 @@ export function DatasetDetail() {
                 className="block w-full text-left"
                 onClick={() => setSelectedIndex(index)}
               >
-                <img
-                  className="aspect-square w-full object-cover"
-                  src={`${API}/files/${image.path}`}
-                />
+                {showCropPreview ? (
+                  <TrainingCropPreview
+                    src={`${API}/files/${image.path}`}
+                    resolution={cropPreviewResolution}
+                  />
+                ) : (
+                  <img
+                    className="aspect-square w-full object-cover"
+                    src={`${API}/files/${image.path}`}
+                  />
+                )}
                 <p className="dataset-image-caption">
                   <span>{image.caption || t("No caption yet")}</span>
                 </p>
@@ -1457,6 +1553,7 @@ export function DatasetDetail() {
           captionedCount={captionedCount}
           suggestion={suggestion}
           onQueue={(params) => enqueueTraining.mutate(params)}
+          onResolutionChange={setCropPreviewResolution}
           queuing={enqueueTraining.isPending}
         />
       </aside>
