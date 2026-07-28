@@ -173,6 +173,20 @@ type Suggestion = {
   sample_prompt_reason?: string;
   reason: string;
 };
+type DatasetQuality = {
+  resolution: number;
+  image_count: number;
+  ready: boolean;
+  attention_image_count: number;
+  missing_caption_ids: string[];
+  short_caption_ids: string[];
+  small_image_ids: string[];
+  crop_risk_ids: string[];
+  duplicate_image_ids: string[];
+  duplicate_pairs: { image_ids: string[]; distance: number }[];
+  repeated_caption_groups: string[][];
+  unreadable: { id: string; path: string }[];
+};
 
 function ValidationResolutionMenu({
   sample,
@@ -623,10 +637,35 @@ function DatasetActions({
   );
 }
 
+function QualityItem({
+  label,
+  count,
+  detail,
+  tone,
+}: {
+  label: string;
+  count: number;
+  detail?: string;
+  tone?: "critical";
+}) {
+  return (
+    <div className={`dataset-quality-item ${count ? "has-issues" : ""} ${tone === "critical" && count ? "is-critical" : ""}`}>
+      <span className="dataset-quality-item-count">{count}</span>
+      <div>
+        <strong>{label}</strong>
+        {detail && <small>{detail}</small>}
+      </div>
+    </div>
+  );
+}
+
 function TrainingPlan({
   imageCount,
   captionedCount,
   suggestion,
+  quality,
+  qualityLoading,
+  qualityError,
   onQueue,
   onResolutionChange,
   queuing,
@@ -634,6 +673,9 @@ function TrainingPlan({
   imageCount: number;
   captionedCount: number;
   suggestion?: Suggestion;
+  quality?: DatasetQuality;
+  qualityLoading: boolean;
+  qualityError: boolean;
   onQueue: (params: TrainingParams) => void;
   onResolutionChange: (resolution: number) => void;
   queuing: boolean;
@@ -642,7 +684,7 @@ function TrainingPlan({
   const [preset, setPreset] = useState<"recommended" | "quick" | "custom">(
     "recommended",
   );
-  const [panelTab, setPanelTab] = useState<"training" | "validation">(
+  const [panelTab, setPanelTab] = useState<"training" | "validation" | "quality">(
     "training",
   );
   const [params, setParams] = useState<TrainingParams>({
@@ -689,7 +731,12 @@ function TrainingPlan({
         saveEvery: Math.min(current.saveEvery ?? 250, plan.steps),
       }));
   };
-  const ready = imageCount > 0 && captionedCount === imageCount;
+  const ready =
+    imageCount > 0 &&
+    captionedCount === imageCount &&
+    !qualityLoading &&
+    !qualityError &&
+    (quality?.ready ?? false);
   const recommended = suggestion?.recommended ?? params;
   const recommendedExposures =
     suggestion?.recommended.exposures_per_image ??
@@ -749,6 +796,19 @@ function TrainingPlan({
           {params.sampleEnabled && (
             <span className="training-tab-count">
               {validationSamples.length}
+            </span>
+          )}
+        </button>
+        <button
+          role="tab"
+          aria-selected={panelTab === "quality"}
+          className={panelTab === "quality" ? "training-tab-active" : ""}
+          onClick={() => setPanelTab("quality")}
+        >
+          {t("Data check")}
+          {!!quality?.attention_image_count && (
+            <span className="training-tab-count">
+              {quality.attention_image_count}
             </span>
           )}
         </button>
@@ -879,7 +939,7 @@ function TrainingPlan({
             </section>
           </div>
         </>
-      ) : (
+      ) : panelTab === "validation" ? (
         <section className="training-validation">
           <div className="flex items-center justify-between gap-4">
             <h4 className="training-form-title">{t("Validation images")}</h4>
@@ -993,6 +1053,96 @@ function TrainingPlan({
             </>
           )}
         </section>
+      ) : (
+        <section className="dataset-quality-check">
+          {qualityError ? (
+            <p className="dataset-quality-loading">{t("Could not check dataset quality. Try again before training.")}</p>
+          ) : !quality ? (
+            <p className="dataset-quality-loading">{t("Checking dataset quality…")}</p>
+          ) : (
+            <>
+              <div className="dataset-quality-status">
+                <span className={quality.ready ? "is-ready" : "is-review"} aria-hidden="true" />
+                <div>
+                  <h4>
+                    {quality.ready
+                      ? quality.attention_image_count
+                        ? t("Ready to train — review notices")
+                        : t("Ready to train")
+                      : t("Needs attention")}
+                  </h4>
+                  <p>
+                    {quality.ready
+                      ? quality.attention_image_count
+                        ? t("Training can start; review the non-blocking notices below.")
+                        : t("All images have captions and no blocking file issues were found.")
+                      : t("Resolve missing captions or unreadable files before training.")}
+                  </p>
+                </div>
+              </div>
+              <p className="dataset-quality-context">
+                {t("Checked at {resolution}px training resolution.", {
+                  resolution: quality.resolution,
+                })}
+              </p>
+              <div className="dataset-quality-list">
+                <QualityItem
+                  label={t("Missing captions")}
+                  count={quality.missing_caption_ids.length}
+                  tone="critical"
+                />
+                <QualityItem
+                  label={t("Unreadable files")}
+                  count={quality.unreadable.length}
+                  tone="critical"
+                />
+                <QualityItem
+                  label={t("Images below {resolution}px", {
+                    resolution: quality.resolution,
+                  })}
+                  count={quality.small_image_ids.length}
+                />
+                <QualityItem
+                  label={t("High crop loss")}
+                  count={quality.crop_risk_ids.length}
+                  detail={t("More than 12% is removed by center cropping.")}
+                />
+                <QualityItem
+                  label={t("Potential duplicate images")}
+                  count={quality.duplicate_image_ids.length}
+                  detail={
+                    quality.duplicate_pairs.length
+                      ? t("{count} close image pairs found.", {
+                          count: quality.duplicate_pairs.length,
+                        })
+                      : undefined
+                  }
+                />
+                <QualityItem
+                  label={t("Repeated captions")}
+                  count={quality.repeated_caption_groups.reduce(
+                    (total, group) => total + group.length,
+                    0,
+                  )}
+                  detail={
+                    quality.repeated_caption_groups.length
+                      ? t("{count} repeated caption groups found.", {
+                          count: quality.repeated_caption_groups.length,
+                        })
+                      : undefined
+                  }
+                />
+                <QualityItem
+                  label={t("Very short captions")}
+                  count={quality.short_caption_ids.length}
+                />
+              </div>
+              {quality.attention_image_count === 0 && (
+                <p className="dataset-quality-clear">{t("No common data-quality risks found.")}</p>
+              )}
+            </>
+          )}
+        </section>
       )}
       <div className="training-panel-actions">
         <button
@@ -1006,6 +1156,12 @@ function TrainingPlan({
           <p>
             {imageCount === 0
               ? t("Add images before training.")
+              : qualityLoading
+                ? t("Checking dataset quality…")
+              : qualityError
+                ? t("Could not check dataset quality. Try again before training.")
+              : quality?.unreadable.length
+                ? t("Remove or replace unreadable image files before training.")
               : t("{count} images still need captions.", { count: imageCount - captionedCount })}
           </p>
         ) : !validationReady ? (
@@ -1188,6 +1344,17 @@ export function DatasetDetail() {
       (await fetch(`${API}/api/datasets/${id}/training-suggestion`)).json(),
     enabled: !!id,
   });
+  const { data: quality, isLoading: qualityLoading, isError: qualityError } = useQuery<DatasetQuality>({
+    queryKey: ["dataset-quality", id, cropPreviewResolution],
+    queryFn: async () => {
+      const response = await fetch(
+        `${API}/api/datasets/${id}/quality?resolution=${cropPreviewResolution}`,
+      );
+      if (!response.ok) throw new Error("Could not check dataset quality.");
+      return response.json();
+    },
+    enabled: !!id,
+  });
   const upload = useMutation({
     mutationFn: async (files: FileList) => {
       const body = new FormData();
@@ -1201,6 +1368,8 @@ export function DatasetDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["dataset", id] });
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["training-suggestion", id] });
     },
   });
   const caption = useMutation({
@@ -1236,8 +1405,11 @@ export function DatasetDetail() {
         );
       }
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["training-suggestion", id] });
+    },
   });
   const saveSettings = useMutation({
     mutationFn: async (overrides: { model?: string; prompt?: string } = {}) => {
@@ -1251,8 +1423,11 @@ export function DatasetDetail() {
       });
       if (!r.ok) throw new Error("Could not save settings");
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["training-suggestion", id] });
+    },
   });
   const saveCaption = useMutation({
     mutationFn: async () => {
@@ -1265,8 +1440,11 @@ export function DatasetDetail() {
       });
       if (!r.ok) throw new Error("Could not save caption");
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["dataset", id] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["dataset", id] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["training-suggestion", id] });
+    },
   });
   const removeImages = useMutation({
     mutationFn: async () => {
@@ -1281,6 +1459,8 @@ export function DatasetDetail() {
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["dataset", id] });
       queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      queryClient.invalidateQueries({ queryKey: ["dataset-quality", id] });
+      queryClient.invalidateQueries({ queryKey: ["training-suggestion", id] });
     },
   });
   const removeDataset = useMutation({
@@ -1552,6 +1732,9 @@ export function DatasetDetail() {
           imageCount={data.images.length}
           captionedCount={captionedCount}
           suggestion={suggestion}
+          quality={quality}
+          qualityLoading={qualityLoading}
+          qualityError={qualityError}
           onQueue={(params) => enqueueTraining.mutate(params)}
           onResolutionChange={setCropPreviewResolution}
           queuing={enqueueTraining.isPending}

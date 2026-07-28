@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from fastapi import FastAPI, File, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from google import genai
@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from .data import IMAGE_SUFFIXES
 from .database import Database
+from .quality import audit_dataset_images
 from .suggestions import training_plans
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -149,6 +150,14 @@ async def training_suggestion(dataset_id: str) -> dict[str, Any]:
     else:
         sample_prompt = "A high quality representative image from this training dataset"
     return {"dataset_id": dataset["id"], "image_count": count, "captioned_count": captioned, "caption_coverage": round(captioned / count, 3) if count else 0, "median_short_side": median_short_side, **plans, "sample_prompt": sample_prompt, "sample_prompt_reason": "Chosen from the caption most representative of this dataset." if captions else "Add captions to generate a dataset-specific test prompt.", "reason": f"{count} images, {captioned}/{count} captioned, median short side {median_short_side}px."}
+
+
+@app.get("/api/datasets/{dataset_id}/quality")
+async def dataset_quality(
+    dataset_id: str, resolution: int = Query(default=1024, ge=256, le=2048)
+) -> dict[str, Any]:
+    get_dataset_or_404(dataset_id)
+    return audit_dataset_images(database.images(dataset_id), ROOT, resolution)
 
 
 @app.get("/api/datasets/{dataset_id}")
